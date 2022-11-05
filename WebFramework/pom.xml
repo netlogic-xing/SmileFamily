@@ -5,16 +5,35 @@
     <parent>
         <artifactId>SpiderFamily</artifactId>
         <groupId>cn.spiderfamily</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>${spider.version}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>WebFramework</artifactId>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
+    <packaging>jar</packaging>
+    <name>spider-web</name>
+    <version>${spider.web.version}</version>
+    <description>spider-web is a mvc framework for web</description>
+    <dependencies>
+        <dependency>
+            <groupId>cn.spiderfamily</groupId>
+            <artifactId>SpiderCore</artifactId>
+            <version>${spider.core.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.13.4.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf</artifactId>
+            <version>3.0.15.RELEASE</version>
+        </dependency>
+    </dependencies>
 </project>

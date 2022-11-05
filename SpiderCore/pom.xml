@@ -5,16 +5,12 @@
     <parent>
         <artifactId>SpiderFamily</artifactId>
         <groupId>cn.spiderfamily</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>${spider.version}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
     <artifactId>SpiderCore</artifactId>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
+    <packaging>jar</packaging>
+    <name>spider-core</name>
+    <version>${spider.core.version}</version>
+    <description>Spider core is a dynamic ioc container</description>
 </project>
