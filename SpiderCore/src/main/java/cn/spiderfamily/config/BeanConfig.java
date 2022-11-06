@@ -1,15 +1,14 @@
 package cn.spiderfamily.config;
 
-import cn.spiderfamily.bean.BeanDependence;
+import cn.spiderfamily.bean.Dependency;
 import cn.spiderfamily.context.Context;
-import cn.spiderfamily.util.SpringUtils;
+import cn.spiderfamily.util.BeanUtils;
 import com.google.common.base.Strings;
 import cn.spiderfamily.BeanNotFoundException;
 import cn.spiderfamily.annotation.Bean;
 import cn.spiderfamily.annotation.Configuration;
 import cn.spiderfamily.annotation.Import;
 import cn.spiderfamily.bean.BeanDefinition;
-import org.reflections.ReflectionUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -92,7 +91,7 @@ public class BeanConfig {
         });
     }
 
-    private boolean checkDependence(BeanDependence dep){
+    private boolean checkDependence(Dependency dep){
         if(beanDefinitions.containsKey(dep.name())){
             return true;
         }
@@ -128,7 +127,7 @@ public class BeanConfig {
     }
 
     private Map<String, BeanDefinition> buildBeanDefinitionsFromPackage(String packageName) {
-        return SpringUtils.findAllClassesUsingClassLoader(packageName).stream()
+        return BeanUtils.findAllClassesUsingClassLoader(packageName).stream()
                 .filter(c -> c.isAnnotationPresent(Bean.class))
                 .map(c -> {
                     String name = c.getName();
@@ -170,8 +169,8 @@ public class BeanConfig {
                     if (name == null || name.equals("")) {
                         name = m.getReturnType().getName();
                     }
-                    return new BeanDefinition(name, m.getReturnType(), SpringUtils.getParameterDeps(m), () -> {
-                        return SpringUtils.invoke(m, root.getBeanInstance(), context.getBeans(m.getParameterTypes()));
+                    return new BeanDefinition(name, m.getReturnType(), BeanUtils.getParameterDeps(m), () -> {
+                        return BeanUtils.invoke(m, root.getBeanInstance(), context.getBeans(m.getParameterTypes()));
                     });
                 }).collect(Collectors.toMap(b -> b.getName(), b -> b));
         bd.put(root.getName(), root);
@@ -203,7 +202,7 @@ public class BeanConfig {
      * @param name
      * @param bean
      */
-    public void addBeanAndAutowire(String name, Object bean){
+    public void addBeanAndInjectDependencies(String name, Object bean){
        BeanDefinition bd = putBean(name, bean);
        bd.createInstance(context);
        bd.callAutowiredMethods(context);
@@ -211,8 +210,8 @@ public class BeanConfig {
     }
 
 
-    public void addBeanAndAutowire(Object bean){
-        this.addBeanAndAutowire(bean.getClass().getName(), bean);
+    public void addBeanAndInjectDependencies(Object bean){
+        this.addBeanAndInjectDependencies(bean.getClass().getName(), bean);
     }
     public Context getContext() {
         return context;

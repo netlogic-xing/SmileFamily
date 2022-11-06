@@ -1,10 +1,9 @@
 package cn.spiderfamily.util;
 
-import cn.spiderfamily.annotation.Autowired;
+import cn.spiderfamily.annotation.Injected;
 import cn.spiderfamily.annotation.Value;
-import cn.spiderfamily.bean.BeanDependence;
+import cn.spiderfamily.bean.Dependency;
 import cn.spiderfamily.bean.ValueExtractors;
-import com.google.common.base.Strings;
 import cn.spiderfamily.BeanInitializationException;
 
 import java.io.BufferedReader;
@@ -16,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SpringUtils {
+public class BeanUtils {
     /**
      * 从方法或构造函数的参数及field获取bean名字
      * @param p
@@ -25,9 +24,9 @@ public class SpringUtils {
      */
     public static String getBeanName(AnnotatedElement p, String defaultName) {
         String name = null;
-        Autowired autowired = p.getAnnotation(Autowired.class);
-        if (autowired != null && autowired.name() != null && !autowired.name().equals("")) {
-            name = autowired.name();
+        Injected injected = p.getAnnotation(Injected.class);
+        if (injected != null && injected.name() != null && !injected.name().equals("")) {
+            name = injected.name();
         }
         if (name == null) {
             name = defaultName;
@@ -96,19 +95,19 @@ public class SpringUtils {
      * @param e
      * @return
      */
-    public static List<BeanDependence> getParameterDeps(Executable e) {
+    public static List<Dependency> getParameterDeps(Executable e) {
         return Arrays.stream(e.getParameters()).map(p -> {
             if (p.isAnnotationPresent(Value.class)) {
                 Value value = p.getAnnotation(Value.class);
-                return new BeanDependence(value.value(), false,
+                return new Dependency(value.value(), false,
                         ValueExtractors.getValueExtractor(p.getType(), value)
                 );
             }
             String beanName = getBeanName(p, p.getType().getName());
-            if (p.isAnnotationPresent(Autowired.class)) {
-                return new BeanDependence(beanName, p.getAnnotation(Autowired.class).required());
+            if (p.isAnnotationPresent(Injected.class)) {
+                return new Dependency(beanName, p.getAnnotation(Injected.class).required());
             }
-            return new BeanDependence(beanName);
+            return new Dependency(beanName);
 
         }).toList();
     }

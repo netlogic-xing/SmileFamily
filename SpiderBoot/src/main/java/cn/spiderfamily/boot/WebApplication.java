@@ -10,7 +10,7 @@ public class WebApplication extends Application{
 
     public WebApplication() {
         jettyServer = new JettyServer();
-        this.getApplicationConfig().addBeanAndAutowire(jettyServer);
+        this.getApplicationConfig().addBeanAndInjectDependencies(jettyServer);
         jettyServer.register("/*", DispatchServlet.class);
     }
     public void start(){

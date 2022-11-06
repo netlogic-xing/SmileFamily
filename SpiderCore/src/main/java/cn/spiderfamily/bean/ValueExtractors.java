@@ -16,7 +16,7 @@ public class ValueExtractors {
      * @param value
      * @return
      */
-    public static DependenceValueExtractor getValueExtractor(Class<?> clazz, Value value) {
+    public static DependencyValueExtractor getValueExtractor(Class<?> clazz, Value value) {
         return context -> {
             String val = (String) context.getBean(value.value());
             val = val == null && value.defaultValue() != null && !value.defaultValue().equals("") ? value.defaultValue() : val;

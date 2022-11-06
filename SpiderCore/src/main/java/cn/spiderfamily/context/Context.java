@@ -1,6 +1,5 @@
 package cn.spiderfamily.context;
 
-import cn.spiderfamily.util.SpringUtils;
 import cn.spiderfamily.BeanNotFoundException;
 import cn.spiderfamily.bean.BeanDefinition;
 

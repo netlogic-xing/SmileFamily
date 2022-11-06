@@ -5,12 +5,12 @@ import cn.spiderfamily.context.Context;
 
 import java.util.function.Consumer;
 
-public record BeanDependence(String name, boolean required, DependenceValueExtractor extractor) {
-    public BeanDependence(String name) {
+public record Dependency(String name, boolean required, DependencyValueExtractor extractor) {
+    public Dependency(String name) {
         this(name, true, context -> context.getBean(name) );
     }
 
-    public BeanDependence(String name, boolean required) {
+    public Dependency(String name, boolean required) {
         this(name, required, context -> context.getBean(name) );
     }
 

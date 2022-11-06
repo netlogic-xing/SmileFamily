@@ -1,13 +1,13 @@
 package cn.spiderfamily.iocexample.service;
 
-import cn.spiderfamily.annotation.Autowired;
+import cn.spiderfamily.annotation.Injected;
 import cn.spiderfamily.annotation.Bean;
 import cn.spiderfamily.annotation.PostConstruct;
 import cn.spiderfamily.iocexample.external.DataSource;
 
 @Bean
 public class HostService {
-    @Autowired
+    @Injected
     private DataSource dataSource;
 
     public void doAction() {
