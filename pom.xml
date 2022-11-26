@@ -4,15 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.spiderfamily</groupId>
-    <artifactId>SpiderFamily</artifactId>
-    <version>${spider.version}</version>
+    <groupId>cn.smilefamily</groupId>
+    <artifactId>SmileFamily</artifactId>
+    <version>${smile.version}</version>
     <packaging>pom</packaging>
     <modules>
         <module>common</module>
-        <module>SpiderCore</module>
+        <module>SmileCore</module>
         <module>WebFramework</module>
-        <module>SpiderBoot</module>
+        <module>SmileBoot</module>
         <module>SmileTemplate</module>
     </modules>
 
@@ -21,12 +21,12 @@
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.parmaters>true</maven.compiler.parmaters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spider.version>1.0.0-SNAPSHOT</spider.version>
-        <spider.core.version>${spider.version}</spider.core.version>
-        <spider.common.version>${spider.version}</spider.common.version>
-        <spider.web.version>${spider.version}</spider.web.version>
-        <spider.boot.version>${spider.version}</spider.boot.version>
-        <spider.smile.version>${spider.version}</spider.smile.version>
+        <smile.version>1.0.0-SNAPSHOT</smile.version>
+        <smile.core.version>${smile.version}</smile.core.version>
+        <smile.common.version>${smile.version}</smile.common.version>
+        <smile.web.version>${smile.version}</smile.web.version>
+        <smile.boot.version>${smile.version}</smile.boot.version>
+        <smile.template.version>${smile.version}</smile.template.version>
     </properties>
     <build>
         <pluginManagement>

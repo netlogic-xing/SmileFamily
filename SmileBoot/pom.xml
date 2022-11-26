@@ -9,11 +9,9 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>WebFramework</artifactId>
-    <packaging>jar</packaging>
-    <name>smile-web</name>
-    <version>${smile.web.version}</version>
-    <description>Smile-web is a mvc framework for web</description>
+    <artifactId>SmileBoot</artifactId>
+    <name>smile-boot</name>
+    <description>Smile boot provides a way of rapid development and deployment</description>
     <dependencies>
         <dependency>
             <groupId>cn.smilefamily</groupId>
@@ -21,19 +19,19 @@
             <version>${smile.core.version}</version>
         </dependency>
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
+            <groupId>cn.smilefamily</groupId>
+            <artifactId>WebFramework</artifactId>
+            <version>${smile.web.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.13.4.2</version>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>10.0.12</version>
         </dependency>
         <dependency>
-            <groupId>org.thymeleaf</groupId>
-            <artifactId>thymeleaf</artifactId>
-            <version>3.0.15.RELEASE</version>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>10.0.12</version>
         </dependency>
     </dependencies>
 </project>

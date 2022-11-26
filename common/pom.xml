@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>SpiderFamily</artifactId>
-        <groupId>cn.spiderfamily</groupId>
-        <version>${spider.version}</version>
+        <artifactId>SmileFamily</artifactId>
+        <groupId>cn.smilefamily</groupId>
+        <version>${smile.version}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>common</artifactId>
-    <name>Spider Common</name>
-    <version>${spider.common.version}</version>
+    <name>smile common</name>
+    <version>${smile.common.version}</version>
     <description>Commons and utilities for other module</description>
 </project>

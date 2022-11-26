@@ -1,5 +1,5 @@
 <!-- TOC -->
-* [SpiderIoC core concepts](#spiderioc-core-concepts)
+* [SmileIoC core concepts](#Smileioc-core-concepts)
     * [Bean lifecycle](#bean-lifecycle)
     * [Annotation marked injection](#annotation-marked-injection)
       * [Field Injection](#field-injection)
@@ -10,7 +10,7 @@
       * [Java config construction](#java-config-construction)
       * [Freestyle construction](#freestyle-construction)
 <!-- TOC -->
-# SpiderIoC core concepts
+# SmileIoC core concepts
 ### Bean lifecycle
 ### Annotation marked injection
 #### Field Injection

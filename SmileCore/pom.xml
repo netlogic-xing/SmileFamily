@@ -8,11 +8,9 @@
         <version>${smile.version}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
-    <artifactId>SmileTemplate</artifactId>
-    <name>Smile template language</name>
-    <version>${smile.template.version}</version>
-    <description>A simple template for server side</description>
-
-
+    <artifactId>SmileCore</artifactId>
+    <packaging>jar</packaging>
+    <name>smile-core</name>
+    <version>${smile.core.version}</version>
+    <description>Smile core is a dynamic ioc container</description>
 </project>
