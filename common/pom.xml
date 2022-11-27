@@ -5,11 +5,10 @@
     <parent>
         <artifactId>SmileFamily</artifactId>
         <groupId>cn.smilefamily</groupId>
-        <version>${smile.version}</version>
+        <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>common</artifactId>
     <name>smile common</name>
-    <version>${smile.common.version}</version>
     <description>Commons and utilities for other module</description>
 </project>
