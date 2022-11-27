@@ -89,7 +89,10 @@ public class BeanDefinition {
         if (beanInstance == null && constructor != null) {//如果有标注为@Autowired的有参构造函数，则采用此构造函数生成bean
             beanInstance = BeanUtils.newInstance(constructor, BeanUtils.getParameterDeps(constructor).stream().map(p -> p.getDepValue(context)).toArray());
         }
-        createInstance();//默认采用无参构造函数生成bean
+        //默认采用无参构造函数生成bean
+         if (beanInstance == null) {
+            beanInstance = BeanUtils.newInstance(type);
+        }
     }
 
     /**
@@ -121,13 +124,6 @@ public class BeanDefinition {
         });
         beanInitialized = true;
     }
-
-    public void createInstance() {
-        if (beanInstance == null) {
-            beanInstance = BeanUtils.newInstance(type);
-        }
-    }
-
     public Object getBeanInstance() {
         return beanInstance;
     }

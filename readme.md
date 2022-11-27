@@ -25,7 +25,7 @@ Smile家族包括:
 1. SmileCore----SmileIoC容器
 2. SmileWebFramework----Web MVC开发框架
 3. SmileBoot----all-in-one的开发框架
-4. Smile----简单server端模版语言
+4. SmileTemplate----简单server端模版语言
 
 --------------------
 >此分支采用aspectj实现

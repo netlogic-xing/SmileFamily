@@ -22,65 +22,10 @@ public class Context {
      * parent环境，查找bean时如果在自身没找到，就到parent找。
      */
     private Context parent;
-    private Map<String, Object> beans = new HashMap<>();
-
-
-    public Object getBean(String name) {
-        Object bean = this.beans.get(name);
-        if(bean == null&&parent != null){
-            bean = parent.getBean(name);
-        }
-        return bean;
-    }
-
-    public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
-        List<Object> annotatedBeans = beans.values().stream().filter(o -> o.getClass().isAnnotationPresent(annotation)).toList();
-        if(parent != null){
-            annotatedBeans.addAll(parent.getBeansByAnnotation(annotation));
-        }
-        return annotatedBeans;
-    }
-
-    public void addBean(BeanDefinition bd) {
-        beans.put(bd.getName(), bd.getBeanInstance());
-    }
-
-    public Object getBean(Class<?> clazz) {
-        return getBean(clazz.getName());
-    }
-
-    public Object[] getBeans(Class<?>... classes) {
-        List<Object> targetBeans = new ArrayList<>();
-        for (Class<?> clazz : classes) {
-            Object bean = getBean(clazz);
-            if (bean == null) {
-                throw new BeanNotFoundException(clazz.getName());
-            }
-            targetBeans.add(bean);
-        }
-        return targetBeans.toArray();
-    }
-
-    public Object[] getBeans(List<Class<?>> classes) {
-        return getBeans(classes.toArray(new Class<?>[0]));
-    }
-
-    public Object[] getBeans(String... deps) {
-        List<Object> targetBeans = new ArrayList<>();
-        for (String dep : deps) {
-            Object bean = getBean(dep);
-            if (bean == null) {
-                throw new BeanNotFoundException(dep);
-            }
-            targetBeans.add(bean);
-        }
-        return targetBeans.toArray();
-    }
     /**
      * All beans defined here
      */
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
-
 
     public Context(Class<?> configClass) {
         this(configClass, null, null);
@@ -93,9 +38,11 @@ public class Context {
     public Context(Class<?> configClass, String initProperties) {
         this(configClass, null, initProperties);
     }
+
     public Context(String initProperties){
         this(null,  null,  initProperties);
     }
+
     public Context(Class<?> configClass, Context parent, String initPropertiesFile) {
         this.parent = parent;
         if(!Strings.isNullOrEmpty(initPropertiesFile)){
@@ -132,6 +79,63 @@ public class Context {
         addBean(this);
     }
 
+    public Object getBean(String name) {
+        BeanDefinition bd = this.beanDefinitions.get(name);
+        if(bd == null&&parent != null){
+            return parent.getBean(name);
+        }
+        if(bd== null){
+            return null;
+        }
+        return bd.getBeanInstance();
+    }
+
+    public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
+        List<Object> annotatedBeans = beanDefinitions.values().stream().map(bd->bd.getBeanInstance())
+                .filter(o -> o.getClass().isAnnotationPresent(annotation)).toList();
+        if(parent != null){
+            annotatedBeans.addAll(parent.getBeansByAnnotation(annotation));
+        }
+        return annotatedBeans;
+    }
+
+    public void addBean(BeanDefinition bd) {
+        bd.createInstance(this);
+        beanDefinitions.put(bd.getName(), bd);
+    }
+
+    public Object getBean(Class<?> clazz) {
+        return getBean(clazz.getName());
+    }
+
+    public Object[] getBeans(Class<?>... classes) {
+        List<Object> targetBeans = new ArrayList<>();
+        for (Class<?> clazz : classes) {
+            Object bean = getBean(clazz);
+            if (bean == null) {
+                throw new BeanNotFoundException(clazz.getName());
+            }
+            targetBeans.add(bean);
+        }
+        return targetBeans.toArray();
+    }
+
+    public Object[] getBeans(List<Class<?>> classes) {
+        return getBeans(classes.toArray(new Class<?>[0]));
+    }
+
+    public Object[] getBeans(String... deps) {
+        List<Object> targetBeans = new ArrayList<>();
+        for (String dep : deps) {
+            Object bean = getBean(dep);
+            if (bean == null) {
+                throw new BeanNotFoundException(dep);
+            }
+            targetBeans.add(bean);
+        }
+        return targetBeans.toArray();
+    }
+
     public void buildContext() {
         createBeans(beanDefinitions.values().stream().toList());
         beansInject(beanDefinitions.values().stream().toList());
@@ -144,7 +148,6 @@ public class Context {
                     .filter(this::checkDependence)
                     .map(dep -> getBeanDefinition(dep.name())).toList());
             bd.createInstance(this);
-            this.addBean(bd);
         });
     }
 
@@ -216,7 +219,7 @@ public class Context {
 
     private Map<String, BeanDefinition> buildBeanDefinitionsFromConfigClass(Class<?> configClass) {
         BeanDefinition root = new BeanDefinition(configClass);
-        root.createInstance();
+        root.createInstance(this);
         Map<String, BeanDefinition> bd = Arrays.stream(configClass.getMethods())
                 .filter(m -> {
                     return m.isAnnotationPresent(Bean.class);
