@@ -3,7 +3,7 @@ package cn.smilefamily.web.base;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import cn.smilefamily.config.BeanConfig;
+import cn.smilefamily.context.Context;
 import cn.smilefamily.web.ControllerConfigException;
 import cn.smilefamily.web.WebConfigNotFoundException;
 import cn.smilefamily.web.annotation.Controller;
@@ -27,7 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DispatchServlet extends HttpServlet {
-    private BeanConfig beanConfig;
+    private Context beanConfig;
     private Table<String, Pattern, RequestHandler> controllerMethods;
 
     private String path(HttpServletRequest req) {
@@ -41,7 +41,7 @@ public class DispatchServlet extends HttpServlet {
         doAction("GET", req, resp);
     }
 
-    private void doAction(String method, HttpServletRequest req, HttpServletResponse resp) {
+    private void doAction(String method, HttpServletRequest req, HttpServletResponse resp) throws IOException {
         for (Map.Entry<Pattern, RequestHandler>  e: controllerMethods.row(method).entrySet()) {
             Matcher matcher = e.getKey().matcher(path(req));
             if(!matcher.matches()){
@@ -49,6 +49,7 @@ public class DispatchServlet extends HttpServlet {
             }
             e.getValue().handle(req, resp, matcher);
         }
+        resp.getWriter().write("no handler found!");
     }
 
     @Override
@@ -81,15 +82,15 @@ public class DispatchServlet extends HttpServlet {
         }
         Class<?> webConfigClass = classes.stream().findFirst().orElseThrow(() -> new WebConfigNotFoundException("No class annotated by @WebConfiguration Found!"));
         log("Using web config class: " + webConfigClass.getName());
-        beanConfig = new BeanConfig(webConfigClass);
+        beanConfig = new Context(webConfigClass);
         //直接注入servletConfig和servletContext
         beanConfig.addBean(ServletConfig.class.getName(), this.getServletConfig());
         beanConfig.addBean(ServletContext.class.getName(), this.getServletContext());
         beanConfig.buildContext();
         //把BeanContext放到静态类方便后续方法中使用
-        BeanContextHolder.setContext(beanConfig.getContext());
+        BeanContextHolder.setContext(beanConfig);
         controllerMethods = HashBasedTable.create();
-        List<?> controllers = beanConfig.getContext().getBeansByAnnotation(Controller.class);
+        List<?> controllers = beanConfig.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {
             RequestMapping baseMapping = controller.getClass().getAnnotation(RequestMapping.class);
             final String baseUri = baseMapping == null ? "" : Strings.nullToEmpty(baseMapping.value());

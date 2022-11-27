@@ -12,4 +12,10 @@
     <packaging>jar</packaging>
     <name>smile-core</name>
     <description>Smile core is a dynamic ioc container</description>
+    <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+    </dependencies>
 </project>
