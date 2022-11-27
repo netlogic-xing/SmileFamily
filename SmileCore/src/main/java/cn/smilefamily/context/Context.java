@@ -100,7 +100,7 @@ public class Context {
     }
 
     public void addBean(BeanDefinition bd) {
-        bd.createInstance(this);
+        bd.createInstance();
         beanDefinitions.put(bd.getName(), bd);
     }
 
@@ -147,7 +147,7 @@ public class Context {
             createBeans(bd.getDependencies().stream()
                     .filter(this::checkDependence)
                     .map(dep -> getBeanDefinition(dep.name())).toList());
-            bd.createInstance(this);
+            bd.createInstance();
         });
     }
 
@@ -173,7 +173,7 @@ public class Context {
             beansInject(bd.getDependencies().stream()
                     .filter(this::checkDependence)
                     .map(dep -> getBeanDefinition(dep.name())).toList());
-            bd.callAutowiredMethods(this);
+            bd.callAutowiredMethods();
         });
     }
 
@@ -195,7 +195,7 @@ public class Context {
                     if (bean != null && !bean.name().equals("")) {
                         name = bean.name();
                     }
-                    return new BeanDefinition(name, c);
+                    return new BeanDefinition(this, name, c);
                 })
                 .collect(Collectors.toMap(b -> b.getName(), b -> b));
     }
@@ -218,8 +218,8 @@ public class Context {
     }
 
     private Map<String, BeanDefinition> buildBeanDefinitionsFromConfigClass(Class<?> configClass) {
-        BeanDefinition root = new BeanDefinition(configClass);
-        root.createInstance(this);
+        BeanDefinition root = BeanDefinition.create(this, configClass);
+        root.createInstance();
         Map<String, BeanDefinition> bd = Arrays.stream(configClass.getMethods())
                 .filter(m -> {
                     return m.isAnnotationPresent(Bean.class);
@@ -229,7 +229,7 @@ public class Context {
                     if (name == null || name.equals("")) {
                         name = m.getReturnType().getName();
                     }
-                    return new BeanDefinition(name, m.getReturnType(), BeanUtils.getParameterDeps(m), () -> {
+                    return new BeanDefinition(this, name, m.getReturnType(), BeanUtils.getParameterDeps(m), () -> {
                         return BeanUtils.invoke(m, root.getBeanInstance(), this.getBeans(m.getParameterTypes()));
                     });
                 }).collect(Collectors.toMap(b -> b.getName(), b -> b));
@@ -248,7 +248,7 @@ public class Context {
     }
 
     private BeanDefinition putBean(String name, Object bean){
-        BeanDefinition bd = new BeanDefinition(name, bean.getClass(), Collections.emptyList(), () -> bean);
+        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), Collections.emptyList(), () -> bean);
         beanDefinitions.put(name, bd);
         return bd;
     }
@@ -264,8 +264,8 @@ public class Context {
      */
     public void addBeanAndInjectDependencies(String name, Object bean){
        BeanDefinition bd = putBean(name, bean);
-       bd.createInstance(this);
-       bd.callAutowiredMethods(this);
+       bd.createInstance();
+       bd.callAutowiredMethods();
        bd.callPostConstruct();
     }
 

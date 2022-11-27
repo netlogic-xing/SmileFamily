@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
  * Bean定义核心类。在此框架中，不管是通过扫描标注为@Bean的类还是在JavaConfig中配置的Bean，都会先生成BeanDefinition。
  */
 public class BeanDefinition {
+    private Context context;
     //保持所有此Bean依赖的Bean的名字
     private final List<Dependency> dependencies = new ArrayList<>();
     //Bean名称（在context中的key）
@@ -40,21 +41,12 @@ public class BeanDefinition {
     //服务
     private boolean beanInjectionCompleted;
 
-    public BeanDefinition(String name, String className) throws ClassNotFoundException {
-        this.type = Class.forName(className);
-        this.name = name;
-        collectDependencies();
+    public static BeanDefinition create(Context context, Class<?> clazz) {
+        return new BeanDefinition(context, clazz.getName(), clazz);
     }
 
-    public BeanDefinition(String className) throws ClassNotFoundException {
-        this(className, className);
-    }
-
-    public BeanDefinition(Class<?> clazz) {
-        this(clazz.getName(), clazz);
-    }
-
-    public BeanDefinition(String name, Class<?> clazz) {
+    public BeanDefinition(Context context,String name, Class<?> clazz) {
+        this.context = context;
         this.name = name;
         this.type = clazz;
         collectDependencies();
@@ -68,8 +60,8 @@ public class BeanDefinition {
      * @param deps 生成Bean的方法参数，假定全部都能在Context中找到
      * @param beanCreator  闭包，包裹生成Bean的方法及参数
      */
-    public BeanDefinition(String name, Class<?> clazz, List<Dependency> deps, Supplier<?> beanCreator) {
-        this(name, clazz);
+    public BeanDefinition(Context context,String name, Class<?> clazz, List<Dependency> deps, Supplier<?> beanCreator) {
+        this(context, name, clazz);
         this.beanCreator = beanCreator;
         this.dependencies.addAll(deps);
     }
@@ -82,7 +74,10 @@ public class BeanDefinition {
         return name;
     }
 
-    public void createInstance(Context context) {
+    /**
+     * 创建实例，但未执行注入和post construct
+     */
+    public void createInstance() {
         if (beanInstance == null && beanCreator != null) {//优先采用bean工厂闭包生成Bean
             beanInstance = beanCreator.get();
         }
@@ -97,10 +92,8 @@ public class BeanDefinition {
 
     /**
      * 为所以标注为@Autowired和@Value的Field注入对应Bean然后在调用标注为@Autowired的方法
-     *
-     * @param context
      */
-    public void callAutowiredMethods(Context context) {
+    public void callAutowiredMethods() {
         if (beanInjectionCompleted) {
             return;
         }
