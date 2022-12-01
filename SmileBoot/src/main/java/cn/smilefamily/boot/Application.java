@@ -7,7 +7,7 @@ public class Application {
     private Context applicationContext;
     public Application() {
         applicationContext = new Context("classpath:/application.properties");
-        applicationContext.buildContext();
+        applicationContext.build();
     }
     public Context getApplicationContext() {
         return applicationContext;

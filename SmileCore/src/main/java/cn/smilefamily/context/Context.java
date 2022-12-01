@@ -143,7 +143,7 @@ public class Context {
                 throw new BeanInitializationException("Cannot use bean " + bd.getName() + " with scope " + bd.getScope() + ", current thread is not attached to scope " + bd.getScope());
             }
             Object target = container.computeIfAbsent(bd, key -> {
-                logger.debug("====== create new real instance for "+ bd.getName());
+                logger.debug("====== create new real instance for " + bd.getName());
                 bd.reset();
                 bd.initialize();
                 return bd.getBeanInstance();
@@ -167,7 +167,7 @@ public class Context {
                 throw new BeanInitializationException("Cannot use bean " + bd.getName() + " with scope " + bd.getScope() + ", current thread is not attached to scope " + bd.getScope());
             }
             Object target = container.computeIfAbsent(bd, key -> {
-                logger.info("====== create new real instance for "+ bd.getName());
+                logger.info("====== create new real instance for " + bd.getName());
                 bd.reset();
                 bd.initialize();
                 return bd.getBeanInstance();
@@ -213,11 +213,6 @@ public class Context {
         return annotatedBeans;
     }
 
-    public void addBean(BeanDefinition bd) {
-        bd.createInstance();
-        beanDefinitions.put(bd.getName(), bd);
-    }
-
     public Object getBean(Class<?> clazz) {
         return getBean(clazz.getName());
     }
@@ -250,13 +245,10 @@ public class Context {
         return targetBeans.toArray();
     }
 
-    public void buildContext() {
+    public void build() {
         beanDefinitions.values().forEach(bd -> {
             bd.initialize();
         });
-//        createBeans(beanDefinitions.values().stream().toList());
-//        beansInject(beanDefinitions.values().stream().toList());
-//        beansPostConstruct(beanDefinitions.values().stream().toList());
     }
 
     private void createBeans(List<BeanDefinition> currentBds) {
@@ -386,13 +378,23 @@ public class Context {
      */
     public void addBeanAndInjectDependencies(String name, Object bean) {
         BeanDefinition bd = putBean(name, bean);
-        bd.createInstance();
-        bd.injectDependencies();
-        bd.callPostConstruct();
+        bd.initialize();
     }
 
 
     public void addBeanAndInjectDependencies(Object bean) {
         this.addBeanAndInjectDependencies(bean.getClass().getName(), bean);
+    }
+
+    public Object inject(String name, Object bean) {
+        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, Collections.emptyList(), () -> bean);
+        bd.initialize();
+        return bd.getBeanInstance();
+    }
+
+    public Object create(Class<?> clazz) {
+        BeanDefinition bd = new BeanDefinition(this, clazz.getName(), clazz);
+        bd.initialize();
+        return bd.getBeanInstance();
     }
 }

@@ -31,8 +31,6 @@ public class HelloController {
 
     @RequestMapping("/hello")
     public String hello() {
-//        BeanContextHolder.getContext().createScope("request", new ConcurrentHashMap<>());
-//        BeanContextHolder.getContext().createScope("session", new ConcurrentHashMap<>());
         System.out.println("proto1=" + prototypeBean+ "@" + System.identityHashCode(prototypeBean));
         System.out.println("proto2=" + prototypeBean2 + "@" + System.identityHashCode(prototypeBean2));
         System.out.println("requestBean=" + requestBean + "@" + System.identityHashCode(requestBean));

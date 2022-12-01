@@ -55,6 +55,13 @@ public class BeanUtils {
             throw new BeanInitializationException(e);
         }
     }
+    public static Object invokeStatic(Method method, Object... args) {
+        try {
+            return method.invoke(null, args);
+        } catch (Exception e) {
+            throw new BeanInitializationException(e);
+        }
+    }
 
     public static void setField(Field field, Object target, Object value) {
         try {

@@ -1,10 +1,7 @@
 package cn.smilefamily.bean;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.PostConstruct;
-import cn.smilefamily.annotation.Scope;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.*;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.context.Context;
 import cn.smilefamily.util.BeanUtils;
@@ -14,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -43,9 +41,11 @@ public class BeanDefinition {
 
     //用于生成Bean实例的构造函数
     private Constructor constructor;
+    //用于生成Bean的静态工厂方法@factory
+    private Method factory;
     //用于生成Bean实例的工厂函数
     private Supplier<?> beanCreator;
-    //所有标注为@Autowired和@Value的field
+    //所有标注为@Injected@Value的field
     private Map<Field, Dependency> fieldDependencies = new HashMap<>();
     //所有标注为@Autowired的方法
     private Map<Method, List<Dependency>> methodDependencies = new HashMap<>();
@@ -74,18 +74,19 @@ public class BeanDefinition {
         this.name = name;
         this.type = clazz;
         Scope s = type.getAnnotation(Scope.class);
-        if(s == null){
+        if (s == null) {
             this.scope = Scope.Singleton;
-        }else{
+        } else {
             this.scope = s.value();
         }
         collectDependencies();
     }
-    public boolean isSingleton(){
+
+    public boolean isSingleton() {
         return Scope.Singleton.equals(scope);
     }
 
-    public boolean isPrototype(){
+    public boolean isPrototype() {
         return Scope.Prototype.contains(scope);
     }
 
@@ -101,9 +102,10 @@ public class BeanDefinition {
         this.proxy = proxy;
     }
 
-    public boolean isCustomizedScope(){
-        return !isPrototype()&&!isSingleton();
+    public boolean isCustomizedScope() {
+        return !isPrototype() && !isSingleton();
     }
+
     /**
      * 用于在生成JavaConfig中@Bean标注的方法定义的Bean
      *
@@ -114,7 +116,7 @@ public class BeanDefinition {
      */
     public BeanDefinition(Context context, String name, Class<?> clazz, String scope, List<Dependency> deps, Supplier<?> beanCreator) {
         this(context, name, clazz);
-        if(scope != null && !scope.equals("")){
+        if (scope != null && !scope.equals("")) {
             this.scope = scope;
         }
         this.beanCreator = beanCreator;
@@ -149,8 +151,11 @@ public class BeanDefinition {
         if (beanInstance == null && beanCreator != null) {//优先采用bean工厂闭包生成Bean
             beanInstance = beanCreator.get();
         }
-        if (beanInstance == null && constructor != null) {//如果有标注为@Autowired的有参构造函数，则采用此构造函数生成bean
+        if (beanInstance == null && constructor != null) {//如果有标注为@Factory的有参构造函数，则采用此构造函数生成bean
             beanInstance = BeanUtils.newInstance(constructor, BeanUtils.getParameterDeps(constructor).stream().map(p -> p.getDepValue(context)).toArray());
+        }
+        if (beanInstance == null && factory != null) {//采用@Factory静态工厂方法生成实例
+            beanInstance = BeanUtils.invokeStatic(factory, BeanUtils.getParameterDeps(factory).stream().map(p -> p.getDepValue(context)).toArray());
         }
         //默认采用无参构造函数生成bean
         if (beanInstance == null) {
@@ -178,7 +183,7 @@ public class BeanDefinition {
         debugStack.removeLast();
     }
 
-    public void reset(){
+    public void reset() {
         beanInstance = null;
         beanCreated = false;
         beanInjectionPlanned = false;
@@ -188,9 +193,10 @@ public class BeanDefinition {
 
     /**
      * 销毁bean
-      * @param bean
+     *
+     * @param bean
      */
-    public void destroy(Object bean){
+    public void destroy(Object bean) {
 
     }
 
@@ -248,7 +254,7 @@ public class BeanDefinition {
                     return new Dependency(valueExpression, false, extractor);
                 }));
         fieldDependencies.putAll(valueFields);
-        //@Autowired方法的参数依赖
+        //@Injected方法的参数依赖
         methodDependencies = Arrays.stream(this.type.getDeclaredMethods())
                 .filter(m -> m.isAnnotationPresent(Injected.class))
                 .collect(Collectors.toMap(m -> m, m -> {
@@ -259,16 +265,31 @@ public class BeanDefinition {
                 .toList();
         if (constructor == null) {
             Arrays.stream(this.type.getDeclaredConstructors())
-                    .filter(c -> c.isAnnotationPresent(Injected.class))
+                    .filter(c -> Modifier.isPublic(c.getModifiers()))
+                    .filter(c -> c.isAnnotationPresent(Factory.class))
                     .findFirst()
                     .ifPresent(c -> {
                         constructor = c;
+                    });
+        }
+
+        if (constructor == null && factory == null) {//constructor over static factory method
+            Arrays.stream(this.type.getDeclaredMethods())
+                    .filter(f -> Modifier.isStatic(f.getModifiers()) && Modifier.isPublic(f.getModifiers()))
+                    .filter(f -> this.type.isAssignableFrom(f.getReturnType()))
+                    .filter(f -> f.isAnnotationPresent(Factory.class))
+                    .findFirst()
+                    .ifPresent(f -> {
+                        factory = f;
                     });
         }
         dependencies.addAll(fieldDependencies.values());
         dependencies.addAll(methodDependencies.values().stream().flatMap(Collection::stream).toList());
         if (constructor != null) {
             dependencies.addAll(BeanUtils.getParameterDeps(constructor));
+        }
+        if (constructor == null && factory != null) {
+            dependencies.addAll(BeanUtils.getParameterDeps(factory));
         }
     }
 

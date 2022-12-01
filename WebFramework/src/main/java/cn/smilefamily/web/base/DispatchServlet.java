@@ -25,7 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DispatchServlet extends HttpServlet {
-    private Context beanConfig;
+    private Context context;
     private Table<String, Pattern, RequestHandler> controllerMethods;
 
     private String path(HttpServletRequest req) {
@@ -84,16 +84,16 @@ public class DispatchServlet extends HttpServlet {
         }
         Class<?> webConfigClass = classes.stream().findFirst().orElseThrow(() -> new WebConfigNotFoundException("No class annotated by @WebConfiguration Found!"));
         log("Using web config class: " + webConfigClass.getName());
-        beanConfig = new Context(webConfigClass, (Context) this.getServletContext().getAttribute(Context.class.getName()));
+        context = new Context(webConfigClass, (Context) this.getServletContext().getAttribute(Context.class.getName()));
         //直接注入servletConfig和servletContext
-        beanConfig.addBean(ServletConfig.class.getName(), this.getServletConfig());
-        beanConfig.addBean(ServletContext.class.getName(), this.getServletContext());
-        beanConfig.buildContext();
+        context.addBean(ServletConfig.class.getName(), this.getServletConfig());
+        context.addBean(ServletContext.class.getName(), this.getServletContext());
+        context.build();
         //把BeanContext放到静态类方便后续方法中使用
-        BeanContextHolder.setContext(beanConfig);
+        BeanContextHolder.setContext(context);
 
         controllerMethods = HashBasedTable.create();
-        List<?> controllers = beanConfig.getBeansByAnnotation(Controller.class);
+        List<?> controllers = context.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {
             RequestMapping baseMapping = controller.getClass().getAnnotation(RequestMapping.class);
             final String baseUri = baseMapping == null ? "" : Strings.nullToEmpty(baseMapping.value());

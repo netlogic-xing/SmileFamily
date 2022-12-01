@@ -30,12 +30,12 @@ public class AClass{
     private BClass b;
     private CClass c;
     
-    @OnCreated //@OnCreated in method means this method will be called after instance is created and its fields injected
+    @injected //@injected in method means this method will be called after instance is created and its fields injected
     public void setB(BClass b){//injected default by parameter's type name. 
         this.b = b;
     }
     
-    @OnCreated
+    @injected
     public void setC(@Injected(name="cInstance")CClass c){//injected by specified name
         this.c = c;
     }
@@ -156,10 +156,10 @@ public class CClass{
 }
 public class Main{
     public static void main(String[] args) {
-        BeanConfig bc = new BeanConfig(AppConfig.class); 
-        bc.buildContext();
+        Context context = new Context(AppConfig.class);
+        context.build();
         CClass c = new CClass("test");
-        bc.addBean(c);//default bean name is class name.
+        context.addBean(c);//default bean name is class name.
     }
 }
 ```
