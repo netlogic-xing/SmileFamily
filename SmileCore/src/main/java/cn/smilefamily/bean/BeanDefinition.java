@@ -34,6 +34,8 @@ public class BeanDefinition {
     private String name;
     //Bean对应类型
     private Class<?> type;
+    //是否对其他context可见
+    private boolean exported;
 
     private String scope;
 
@@ -73,6 +75,7 @@ public class BeanDefinition {
         this.context = context;
         this.name = name;
         this.type = clazz;
+        this.exported = type.isAnnotationPresent(Export.class);
         Scope s = type.getAnnotation(Scope.class);
         if (s == null) {
             this.scope = Scope.Singleton;
@@ -114,13 +117,18 @@ public class BeanDefinition {
      * @param deps        生成Bean的方法参数，假定全部都能在Context中找到
      * @param beanCreator 闭包，包裹生成Bean的方法及参数
      */
-    public BeanDefinition(Context context, String name, Class<?> clazz, String scope, List<Dependency> deps, Supplier<?> beanCreator) {
+    public BeanDefinition(Context context, String name, Class<?> clazz, String scope, boolean exported, List<Dependency> deps, Supplier<?> beanCreator) {
         this(context, name, clazz);
+        this.exported = exported;
         if (scope != null && !scope.equals("")) {
             this.scope = scope;
         }
         this.beanCreator = beanCreator;
         this.dependencies.addAll(deps);
+    }
+
+    public boolean isExported() {
+        return exported;
     }
 
     public List<Dependency> getDependencies() {

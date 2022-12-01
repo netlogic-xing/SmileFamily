@@ -2,10 +2,7 @@ package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.BeanNotFoundException;
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Configuration;
-import cn.smilefamily.annotation.Import;
-import cn.smilefamily.annotation.Scope;
+import cn.smilefamily.annotation.*;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.Dependency;
 import cn.smilefamily.util.BeanUtils;
@@ -30,6 +27,10 @@ import java.util.stream.Collectors;
 public class Context {
     private static final Logger logger = LoggerFactory
             .getLogger(Context.class);
+    /**
+     * context唯一标识，用于多个context管理
+     */
+    private String name = "root";
     private static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
     /**
      * parent环境，查找bean时如果在自身没找到，就到parent找。
@@ -57,7 +58,29 @@ public class Context {
         this(null, null, initProperties);
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setParent(Context parent) {
+        this.parent = parent;
+    }
+
+    public List<BeanDefinition> export() {
+        return beanDefinitions.values().stream().filter(BeanDefinition::isExported).toList();
+    }
+
+    public void importBeanDefinitions(List<BeanDefinition> bds) {
+        bds.forEach(bd -> {
+            BeanDefinition old = beanDefinitions.put(bd.getName(), bd);
+            if (old != null) {
+                logger.info("BeanDefinition " + old.getName() + " is replaced.");
+            }
+        });
+    }
+
     public Context(Class<?> configClass, Context parent, String initPropertiesFile) {
+        this.name = name;
         this.parent = parent;
         if (!Strings.isNullOrEmpty(initPropertiesFile)) {
             addPropertiesToContext(initPropertiesFile);
@@ -342,7 +365,7 @@ public class Context {
                     if (scope != null) {
                         scopeValue = scope.value();
                     }
-                    return new BeanDefinition(this, name, m.getReturnType(), scopeValue, BeanUtils.getParameterDeps(m), () -> {
+                    return new BeanDefinition(this, name, m.getReturnType(), scopeValue, m.isAnnotationPresent(Export.class), BeanUtils.getParameterDeps(m), () -> {
                         return BeanUtils.invoke(m, root.getBeanInstance(), this.getBeans(m.getParameterTypes()));
                     });
                 }).collect(Collectors.toMap(b -> b.getName(), b -> b));
@@ -361,7 +384,7 @@ public class Context {
     }
 
     private BeanDefinition putBean(String name, Object bean) {
-        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, Collections.emptyList(), () -> bean);
+        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, bean.getClass().isAnnotationPresent(Export.class), Collections.emptyList(), () -> bean);
         beanDefinitions.put(name, bd);
         return bd;
     }
@@ -387,7 +410,7 @@ public class Context {
     }
 
     public Object inject(String name, Object bean) {
-        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, Collections.emptyList(), () -> bean);
+        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, false, Collections.emptyList(), () -> bean);
         bd.initialize();
         return bd.getBeanInstance();
     }
