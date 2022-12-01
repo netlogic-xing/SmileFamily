@@ -5,15 +5,13 @@ import cn.smilefamily.annotation.Value;
 import cn.smilefamily.bean.Dependency;
 import cn.smilefamily.bean.ValueExtractors;
 import cn.smilefamily.BeanInitializationException;
+import org.reflections.Reflections;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class BeanUtils {
     /**
@@ -68,14 +66,9 @@ public class BeanUtils {
     }
 
     //此方法可用Reflections改造
-    public static Set<Class<?>> findAllClassesUsingClassLoader(String packageName) {
-        InputStream stream = ClassLoader.getSystemClassLoader()
-                .getResourceAsStream(packageName.replaceAll("[.]", "/"));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        return reader.lines()
-                .filter(line -> line.endsWith(".class"))
-                .map(line -> getClass(line, packageName))
-                .collect(Collectors.toSet());
+    public static Set<Class<?>> findAllAnnotatedClassIn(String packageName, Class<? extends Annotation> annotationClass) {
+        Reflections reflections = new Reflections(packageName);
+        return reflections.getTypesAnnotatedWith(annotationClass);
     }
 
     private static Class<?> getClass(String className, String packageName) {

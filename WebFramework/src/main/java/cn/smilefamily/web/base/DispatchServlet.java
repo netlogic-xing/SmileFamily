@@ -13,9 +13,7 @@ import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
 import org.reflections.util.ClasspathHelper;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
+import javax.servlet.*;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -42,14 +40,18 @@ public class DispatchServlet extends HttpServlet {
     }
 
     private void doAction(String method, HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        boolean noHandlerFound = true;
         for (Map.Entry<Pattern, RequestHandler>  e: controllerMethods.row(method).entrySet()) {
             Matcher matcher = e.getKey().matcher(path(req));
             if(!matcher.matches()){
                 continue;
             }
+            noHandlerFound = false;
             e.getValue().handle(req, resp, matcher);
         }
-        resp.getWriter().write("no handler found!");
+        if(noHandlerFound) {
+            resp.getWriter().write("no handler found!");
+        }
     }
 
     @Override
@@ -82,13 +84,14 @@ public class DispatchServlet extends HttpServlet {
         }
         Class<?> webConfigClass = classes.stream().findFirst().orElseThrow(() -> new WebConfigNotFoundException("No class annotated by @WebConfiguration Found!"));
         log("Using web config class: " + webConfigClass.getName());
-        beanConfig = new Context(webConfigClass);
+        beanConfig = new Context(webConfigClass, (Context) this.getServletContext().getAttribute(Context.class.getName()));
         //直接注入servletConfig和servletContext
         beanConfig.addBean(ServletConfig.class.getName(), this.getServletConfig());
         beanConfig.addBean(ServletContext.class.getName(), this.getServletContext());
         beanConfig.buildContext();
         //把BeanContext放到静态类方便后续方法中使用
         BeanContextHolder.setContext(beanConfig);
+
         controllerMethods = HashBasedTable.create();
         List<?> controllers = beanConfig.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {

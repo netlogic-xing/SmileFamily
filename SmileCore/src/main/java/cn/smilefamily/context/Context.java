@@ -1,23 +1,36 @@
 package cn.smilefamily.context;
 
-import cn.smilefamily.bean.Dependency;
-import cn.smilefamily.util.BeanUtils;
-import com.google.common.base.Strings;
+import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.BeanNotFoundException;
 import cn.smilefamily.annotation.Bean;
 import cn.smilefamily.annotation.Configuration;
 import cn.smilefamily.annotation.Import;
+import cn.smilefamily.annotation.Scope;
 import cn.smilefamily.bean.BeanDefinition;
+import cn.smilefamily.bean.Dependency;
+import cn.smilefamily.util.BeanUtils;
+import com.google.common.base.Strings;
+import javassist.util.proxy.Proxy;
+import javassist.util.proxy.ProxyFactory;
+import net.sf.cglib.core.DebuggingClassWriter;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
  * JavaConfig类解析器，解析配置类，生成BeanDefinition集合，并最终生成Context
  */
 public class Context {
+    private static final Logger logger = LoggerFactory
+            .getLogger(Context.class);
+    private static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
     /**
      * parent环境，查找bean时如果在自身没找到，就到parent找。
      */
@@ -26,6 +39,7 @@ public class Context {
      * All beans defined here
      */
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+    private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainer = new ThreadLocal<>();
 
     public Context(Class<?> configClass) {
         this(configClass, null, null);
@@ -39,16 +53,16 @@ public class Context {
         this(configClass, null, initProperties);
     }
 
-    public Context(String initProperties){
-        this(null,  null,  initProperties);
+    public Context(String initProperties) {
+        this(null, null, initProperties);
     }
 
     public Context(Class<?> configClass, Context parent, String initPropertiesFile) {
         this.parent = parent;
-        if(!Strings.isNullOrEmpty(initPropertiesFile)){
+        if (!Strings.isNullOrEmpty(initPropertiesFile)) {
             addPropertiesToContext(initPropertiesFile);
         }
-        if(configClass == null){
+        if (configClass == null) {
             return;
         }
         // Add bean defined within the config class
@@ -79,21 +93,121 @@ public class Context {
         addBean(this);
     }
 
+    private Map<String, ConcurrentMap<BeanDefinition, Object>> getScopedContainer() {
+        Map<String, ConcurrentMap<BeanDefinition, Object>> container = threadLocalScopedBeanContainer.get();
+        if (container == null && parent != null) {
+            container = parent.getScopedContainer();
+        }
+        return container;
+    }
+
+    /**
+     * 获取bean唯一方式
+     *
+     * @param name
+     * @return
+     */
     public Object getBean(String name) {
         BeanDefinition bd = this.beanDefinitions.get(name);
-        if(bd == null&&parent != null){
+        if (bd == null && parent != null) {
             return parent.getBean(name);
         }
-        if(bd== null){
+        if (bd == null) {
             return null;
+        }
+        if (bd.isPrototype()) {
+            bd.reset();
+            bd.initialize();
+        }
+        if (bd.isSingleton()) {
+            bd.initialize();
+        }
+        if (bd.isCustomizedScope()) {
+            if (bd.getProxy() == null) {
+                setProxy(bd);
+            }
+            return bd.getProxy();
         }
         return bd.getBeanInstance();
     }
 
+    private void setProxy(BeanDefinition bd) {
+        ProxyFactory factory = new ProxyFactory();
+        factory.setSuperclass(bd.getType());
+        //factory.writeDirectory="./code";
+        Object proxyBean = BeanUtils.newInstance(factory.createClass());
+        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
+            logger.debug("intercept " + m.getName() + "@" + bd.getName() + "@" + bd.getScope());
+            ConcurrentMap container = getScopedContainer().get(SCOPED_BEAN_CONTAINER_PREFIX + bd.getScope());
+            if (container == null) {
+                throw new BeanInitializationException("Cannot use bean " + bd.getName() + " with scope " + bd.getScope() + ", current thread is not attached to scope " + bd.getScope());
+            }
+            Object target = container.computeIfAbsent(bd, key -> {
+                logger.debug("====== create new real instance for "+ bd.getName());
+                bd.reset();
+                bd.initialize();
+                return bd.getBeanInstance();
+            });
+            return m.invoke(target, args);
+        });
+        bd.setProxy(proxyBean);
+    }
+
+    private void setProxyCglib(BeanDefinition bd) {
+        System.setProperty(DebuggingClassWriter.DEBUG_LOCATION_PROPERTY, "./code");
+        // 通过CGLIB动态代理获取代理对象的过程
+        Enhancer enhancer = new Enhancer();
+        // 设置enhancer对象的父类
+        enhancer.setSuperclass(bd.getType());
+        // 设置enhancer的回调对象
+        enhancer.setCallback((MethodInterceptor) (obj, m, args, proxy) -> {
+            logger.info("----intercept " + m.getName() + "@" + bd.getName() + "@" + bd.getScope());
+            ConcurrentMap container = getScopedContainer().get(SCOPED_BEAN_CONTAINER_PREFIX + bd.getScope());
+            if (container == null) {
+                throw new BeanInitializationException("Cannot use bean " + bd.getName() + " with scope " + bd.getScope() + ", current thread is not attached to scope " + bd.getScope());
+            }
+            Object target = container.computeIfAbsent(bd, key -> {
+                logger.info("====== create new real instance for "+ bd.getName());
+                bd.reset();
+                bd.initialize();
+                return bd.getBeanInstance();
+            });
+            return m.invoke(target, args);
+        });
+        bd.setProxy(enhancer.create());
+    }
+
+    public void createScope(String scope, ConcurrentMap<BeanDefinition, Object> scopedContext) {
+        logger.info("create " + scope + " context " + Thread.currentThread());
+        Map<String, ConcurrentMap<BeanDefinition, Object>> container = threadLocalScopedBeanContainer.get();
+        if (container == null) {
+            container = new HashMap<>();
+            threadLocalScopedBeanContainer.set(container);
+        }
+        container.put(SCOPED_BEAN_CONTAINER_PREFIX + scope, scopedContext);
+    }
+
+    public void destroyScope(String scope) {
+        logger.info("destroy " + scope + " context");
+        Map<String, ConcurrentMap<BeanDefinition, Object>> container = getScopedContainer();
+        if (container == null) {
+            throw new BeanInitializationException("container for " + scope + " not existed");
+        }
+        Map<BeanDefinition, Object> scopedContext = container.get(SCOPED_BEAN_CONTAINER_PREFIX + scope);
+        if (scopedContext == null) {
+            throw new BeanInitializationException("scope " + scope + " not existed yet");
+        }
+        scopedContext.forEach((bd, bean) -> {
+            bd.destroy(bean);
+        });
+        container.remove(SCOPED_BEAN_CONTAINER_PREFIX + scope);
+    }
+
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
-        List<Object> annotatedBeans = beanDefinitions.values().stream().map(bd->bd.getBeanInstance())
-                .filter(o -> o.getClass().isAnnotationPresent(annotation)).toList();
-        if(parent != null){
+        List<Object> annotatedBeans = new ArrayList<>(beanDefinitions.values().stream()
+                .filter(bd -> bd.getType().isAnnotationPresent(annotation))
+                .map(bd -> getBean(bd.getName())).toList());
+        if (parent != null) {
             annotatedBeans.addAll(parent.getBeansByAnnotation(annotation));
         }
         return annotatedBeans;
@@ -137,9 +251,12 @@ public class Context {
     }
 
     public void buildContext() {
-        createBeans(beanDefinitions.values().stream().toList());
-        beansInject(beanDefinitions.values().stream().toList());
-        beansPostConstruct(beanDefinitions.values().stream().toList());
+        beanDefinitions.values().forEach(bd -> {
+            bd.initialize();
+        });
+//        createBeans(beanDefinitions.values().stream().toList());
+//        beansInject(beanDefinitions.values().stream().toList());
+//        beansPostConstruct(beanDefinitions.values().stream().toList());
     }
 
     private void createBeans(List<BeanDefinition> currentBds) {
@@ -151,11 +268,11 @@ public class Context {
         });
     }
 
-    private boolean checkDependence(Dependency dep){
-        if(beanDefinitions.containsKey(dep.name())){
+    private boolean checkDependence(Dependency dep) {
+        if (beanDefinitions.containsKey(dep.name())) {
             return true;
         }
-        if(dep.required()){
+        if (dep.required()) {
             throw new BeanNotFoundException(dep.name());
         }
         return false;
@@ -173,7 +290,7 @@ public class Context {
             beansInject(bd.getDependencies().stream()
                     .filter(this::checkDependence)
                     .map(dep -> getBeanDefinition(dep.name())).toList());
-            bd.callAutowiredMethods();
+            bd.injectDependencies();
         });
     }
 
@@ -187,8 +304,7 @@ public class Context {
     }
 
     private Map<String, BeanDefinition> buildBeanDefinitionsFromPackage(String packageName) {
-        return BeanUtils.findAllClassesUsingClassLoader(packageName).stream()
-                .filter(c -> c.isAnnotationPresent(Bean.class))
+        return BeanUtils.findAllAnnotatedClassIn(packageName, Bean.class).stream()
                 .map(c -> {
                     String name = c.getName();
                     Bean bean = c.getAnnotation(Bean.class);
@@ -229,7 +345,12 @@ public class Context {
                     if (name == null || name.equals("")) {
                         name = m.getReturnType().getName();
                     }
-                    return new BeanDefinition(this, name, m.getReturnType(), BeanUtils.getParameterDeps(m), () -> {
+                    Scope scope = m.getAnnotation(Scope.class);
+                    String scopeValue = null;
+                    if (scope != null) {
+                        scopeValue = scope.value();
+                    }
+                    return new BeanDefinition(this, name, m.getReturnType(), scopeValue, BeanUtils.getParameterDeps(m), () -> {
                         return BeanUtils.invoke(m, root.getBeanInstance(), this.getBeans(m.getParameterTypes()));
                     });
                 }).collect(Collectors.toMap(b -> b.getName(), b -> b));
@@ -247,8 +368,8 @@ public class Context {
         putBean(name, bean);
     }
 
-    private BeanDefinition putBean(String name, Object bean){
-        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), Collections.emptyList(), () -> bean);
+    private BeanDefinition putBean(String name, Object bean) {
+        BeanDefinition bd = new BeanDefinition(this, name, bean.getClass(), null, Collections.emptyList(), () -> bean);
         beanDefinitions.put(name, bd);
         return bd;
     }
@@ -259,18 +380,19 @@ public class Context {
 
     /**
      * Add bean to context directly and autowire the bean. Usually, used after context is built.
+     *
      * @param name
      * @param bean
      */
-    public void addBeanAndInjectDependencies(String name, Object bean){
-       BeanDefinition bd = putBean(name, bean);
-       bd.createInstance();
-       bd.callAutowiredMethods();
-       bd.callPostConstruct();
+    public void addBeanAndInjectDependencies(String name, Object bean) {
+        BeanDefinition bd = putBean(name, bean);
+        bd.createInstance();
+        bd.injectDependencies();
+        bd.callPostConstruct();
     }
 
 
-    public void addBeanAndInjectDependencies(Object bean){
+    public void addBeanAndInjectDependencies(Object bean) {
         this.addBeanAndInjectDependencies(bean.getClass().getName(), bean);
     }
 }

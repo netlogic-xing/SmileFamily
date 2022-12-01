@@ -10,7 +10,7 @@ import cn.smilefamily.web.view.ThymeleafViewRenderer;
 import javax.servlet.ServletContext;
 
 @WebConfiguration
-@Configuration(scanPackages = "cn.smilefamily.bootexample.controllers")
+@Configuration(scanPackages = "cn.smilefamily.bootexample")
 public class Main extends WebApplication {
     public static void main(String[] args) {
         Main main = new Main();

@@ -11,4 +11,5 @@
     <artifactId>common</artifactId>
     <name>smile common</name>
     <description>Commons and utilities for other module</description>
+
 </project>
