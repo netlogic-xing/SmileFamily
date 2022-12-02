@@ -15,4 +15,10 @@ public @interface Configuration {
     String[] scanPackages();
     //指定引入的配置文件，配置文件的内容可以在@Value中使用
     String[] properties() default "";
+
+    /**
+     * config name 用于标识一个context，注意如果config是被导入其他config中，则该属性被忽略。
+     * @return
+     */
+    String name() default "";
 }

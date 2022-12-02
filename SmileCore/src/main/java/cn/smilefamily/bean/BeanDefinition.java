@@ -27,15 +27,19 @@ public class BeanDefinition {
 
     private static DelayedTaskExecutor injectExecutor = new DelayedTaskExecutor("injection-executor", dependencyStack::isEmpty);
     private static DelayedTaskExecutor postConstructExecutor = new DelayedTaskExecutor("post-construct-executor", injectExecutor::isEmpty);
-    private Context context;
     //保持所有此Bean依赖的Bean的名字
     private final List<Dependency> dependencies = new ArrayList<>();
+    private Context context;
     //Bean名称（在context中的key）
     private String name;
     //Bean对应类型
     private Class<?> type;
+    //bean定义来源，来自按个config类，那个配置文件。
+    private String source;
     //是否对其他context可见
     private boolean exported;
+    //对导出bean的描述
+    private String description;
 
     private String scope;
 
@@ -67,15 +71,16 @@ public class BeanDefinition {
     //标记此BeanDefinition是否执行了@PostConstruct方法，bean已经功能完备，可对外提供服务
     private boolean beanInitialized;
 
-    public static BeanDefinition create(Context context, Class<?> clazz) {
-        return new BeanDefinition(context, clazz.getName(), clazz);
-    }
-
-    public BeanDefinition(Context context, String name, Class<?> clazz) {
+    public BeanDefinition(Context context, String source, String name, Class<?> clazz) {
         this.context = context;
         this.name = name;
         this.type = clazz;
-        this.exported = type.isAnnotationPresent(Export.class);
+        this.source = source;
+        Export export = type.getAnnotation(Export.class);
+        exported = export != null;
+        if (exported) {
+            this.description = export.value();
+        }
         Scope s = type.getAnnotation(Scope.class);
         if (s == null) {
             this.scope = Scope.Singleton;
@@ -83,6 +88,46 @@ public class BeanDefinition {
             this.scope = s.value();
         }
         collectDependencies();
+    }
+
+    /**
+     * 用于在生成JavaConfig中@Bean标注的方法定义的Bean
+     *
+     * @param name        Bean名称
+     * @param clazz       Bean类型
+     * @param deps        生成Bean的方法参数，假定全部都能在Context中找到
+     * @param beanCreator 闭包，包裹生成Bean的方法及参数
+     */
+    public BeanDefinition(Context context, String source, String name, Class<?> clazz, String scope, Export export,
+                          List<Dependency> deps, Supplier<?> beanCreator) {
+        this(context, source, name, clazz);
+        this.exported = export != null;
+        if (this.exported) {
+            this.description = export.value();
+        }
+        if (scope != null && !scope.equals("")) {
+            this.scope = scope;
+        }
+        this.beanCreator = beanCreator;
+        this.dependencies.addAll(deps);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "Bean(" + name + "/" + scope + ")\n" +
+                "\tfrom: " + source;
+    }
+
+    public static BeanDefinition create(Context context, String source, Class<?> clazz) {
+        return new BeanDefinition(context, source, clazz.getName(), clazz);
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public boolean isSingleton() {
@@ -107,24 +152,6 @@ public class BeanDefinition {
 
     public boolean isCustomizedScope() {
         return !isPrototype() && !isSingleton();
-    }
-
-    /**
-     * 用于在生成JavaConfig中@Bean标注的方法定义的Bean
-     *
-     * @param name        Bean名称
-     * @param clazz       Bean类型
-     * @param deps        生成Bean的方法参数，假定全部都能在Context中找到
-     * @param beanCreator 闭包，包裹生成Bean的方法及参数
-     */
-    public BeanDefinition(Context context, String name, Class<?> clazz, String scope, boolean exported, List<Dependency> deps, Supplier<?> beanCreator) {
-        this(context, name, clazz);
-        this.exported = exported;
-        if (scope != null && !scope.equals("")) {
-            this.scope = scope;
-        }
-        this.beanCreator = beanCreator;
-        this.dependencies.addAll(deps);
     }
 
     public boolean isExported() {
@@ -231,7 +258,7 @@ public class BeanDefinition {
             return;
         }
         initMethods.forEach(m -> {
-            BeanUtils.invoke(m, beanInstance);
+            BeanUtils.invoke(m, beanInstance, BeanUtils.getParameterDeps(m).stream().map(p -> p.getDepValue(context)).toArray());
         });
         beanInitialized = true;
     }
@@ -249,8 +276,10 @@ public class BeanDefinition {
                 .filter(f -> f.isAnnotationPresent(Injected.class))
                 .collect(Collectors.toMap(f -> f, f -> {
                     Injected injected = f.getAnnotation(Injected.class);
+                    External external = f.getAnnotation(External.class);
+                    String desc = external == null ? "" : external.value();
                     String name = BeanUtils.getBeanName(f, f.getType().getName());
-                    return new Dependency(name, injected.required());
+                    return new Dependency(name, injected.required(), desc, external != null);
                 }));
         //@Value Field依赖
         Map<Field, Dependency> valueFields = Arrays.stream(this.type.getDeclaredFields())
@@ -258,8 +287,10 @@ public class BeanDefinition {
                 .collect(Collectors.toMap(f -> f, f -> {
                     Value valueAnnotation = f.getAnnotation(Value.class);
                     String valueExpression = valueAnnotation.value();
+                    External external = f.getAnnotation(External.class);
+                    String desc = external == null ? "" : external.value();
                     DependencyValueExtractor extractor = ValueExtractors.getValueExtractor(f.getType(), valueAnnotation);
-                    return new Dependency(valueExpression, false, extractor);
+                    return new Dependency(valueExpression, false, desc, external != null, extractor);
                 }));
         fieldDependencies.putAll(valueFields);
         //@Injected方法的参数依赖

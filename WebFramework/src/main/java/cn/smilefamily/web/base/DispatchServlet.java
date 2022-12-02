@@ -86,8 +86,8 @@ public class DispatchServlet extends HttpServlet {
         log("Using web config class: " + webConfigClass.getName());
         context = new Context(webConfigClass, (Context) this.getServletContext().getAttribute(Context.class.getName()));
         //直接注入servletConfig和servletContext
-        context.addBean(ServletConfig.class.getName(), this.getServletConfig());
-        context.addBean(ServletContext.class.getName(), this.getServletContext());
+        context.addBean(ServletConfig.class.getName(), this.getServletConfig(), "servlet init");
+        context.addBean(ServletContext.class.getName(), this.getServletContext(), "servlet init");
         context.build();
         //把BeanContext放到静态类方便后续方法中使用
         BeanContextHolder.setContext(context);

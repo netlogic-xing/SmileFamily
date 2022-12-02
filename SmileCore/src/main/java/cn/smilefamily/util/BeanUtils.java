@@ -1,10 +1,11 @@
 package cn.smilefamily.util;
 
+import cn.smilefamily.BeanInitializationException;
+import cn.smilefamily.annotation.External;
 import cn.smilefamily.annotation.Injected;
 import cn.smilefamily.annotation.Value;
 import cn.smilefamily.bean.Dependency;
 import cn.smilefamily.bean.ValueExtractors;
-import cn.smilefamily.BeanInitializationException;
 import org.reflections.Reflections;
 
 import java.lang.annotation.Annotation;
@@ -16,6 +17,7 @@ import java.util.Set;
 public class BeanUtils {
     /**
      * 从方法或构造函数的参数及field获取bean名字
+     *
      * @param p
      * @param defaultName
      * @return
@@ -55,6 +57,7 @@ public class BeanUtils {
             throw new BeanInitializationException(e);
         }
     }
+
     public static Object invokeStatic(Method method, Object... args) {
         try {
             return method.invoke(null, args);
@@ -97,18 +100,19 @@ public class BeanUtils {
      */
     public static List<Dependency> getParameterDeps(Executable e) {
         return Arrays.stream(e.getParameters()).map(p -> {
+            External external = p.getAnnotation(External.class);
+            String desc = external == null ? "" : external.value();
             if (p.isAnnotationPresent(Value.class)) {
                 Value value = p.getAnnotation(Value.class);
-                return new Dependency(value.value(), false,
+                return new Dependency(value.value(), false, desc, external != null,
                         ValueExtractors.getValueExtractor(p.getType(), value)
                 );
             }
             String beanName = getBeanName(p, p.getType().getName());
             if (p.isAnnotationPresent(Injected.class)) {
-                return new Dependency(beanName, p.getAnnotation(Injected.class).required());
+                return new Dependency(beanName, p.getAnnotation(Injected.class).required(), desc, external != null);
             }
-            return new Dependency(beanName);
-
+            return new Dependency(beanName, desc, external != null);
         }).toList();
     }
 }

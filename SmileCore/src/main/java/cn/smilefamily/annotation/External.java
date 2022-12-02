@@ -5,10 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.METHOD})
+@Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 /**
- * 标注一个方法将在bean成功创建后执行。注意，标注的方法可以有参数，但不算Bean依赖。
+ * 标注一个依赖项应该由其他模块提供
  */
-public @interface PostConstruct {
+public @interface External {
+    //对外部依赖项的描述
+    String value() default "";
 }
