@@ -3,7 +3,7 @@ import cn.smilefamily.common.DelayedTaskExecutor;
 import org.aspectj.lang.annotation.Before;
 
 public aspect Dev {
-    pointcut keypoint(DelayedTaskExecutor executor):execution(private void execute())&&target(executor);
+    pointcut keypoint(DelayedTaskExecutor executor):execution(public void execute())&&target(executor);
     before(DelayedTaskExecutor executor):keypoint(executor){
         Debug.enter(thisJoinPoint.getSignature().getName()+"["+executor.getName()+"]");
     }

@@ -16,7 +16,7 @@ import java.util.EventListener;
 public class JettyServer {
     private Server server;
     private ServletContextHandler servletHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
-    @Value("spring.server.port")
+    @Value("${spring.server.port}")
     private int port = 8080;
 
     public void start() throws Exception {

@@ -60,7 +60,7 @@ public class DelayedTaskExecutor {
         return queue.isEmpty();
     }
 
-    private void execute() {
+    public void execute() {
         Task task = null;
         while ((task = queue.pollLast()) != null) {
             task.runnable().run();
