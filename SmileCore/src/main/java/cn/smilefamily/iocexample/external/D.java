@@ -10,7 +10,7 @@ public class D {
     @Injected
     private A a;
     @Factory
-    public D(@Value(value = "name",defaultValue = "xing") String name) {
+    public D(@Value(value = "${name:xingchenyang}") String name) {
         this.name = name;
     }
 }

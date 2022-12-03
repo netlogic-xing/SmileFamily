@@ -25,7 +25,7 @@ public class ContextManager {
 
     public void addContext(Context child) {
         //默认把第一个context设置为root
-        if(rootContext.compareAndSet(null, child)){
+        if (rootContext.compareAndSet(null, child)) {
             return;
         }
         Context old = children.putIfAbsent(child.getName(), child);
@@ -37,15 +37,20 @@ public class ContextManager {
     }
 
     public Context getContext(String name) {
-        return children.get(name);
+
+        Context context = children.get(name);
+        if (context == null) {
+            return rootContext.get();
+        }
+        return context;
     }
 
     public void setRootContext(Context rootContext) {
         //显式设置root后，原来默认root降级为child
-         Context old = this.rootContext.getAndSet(rootContext);
-         if(old != null){
-             addContext(old);
-         }
+        Context old = this.rootContext.getAndSet(rootContext);
+        if (old != null) {
+            addContext(old);
+        }
     }
 
     public static ContextManager getInstance() {

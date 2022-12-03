@@ -16,5 +16,4 @@ public @interface Value {
     * @return
     */
    String value();
-   String defaultValue() default "";
 }

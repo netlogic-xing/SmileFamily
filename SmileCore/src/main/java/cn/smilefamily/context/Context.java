@@ -4,6 +4,7 @@ import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.BeanNotFoundException;
 import cn.smilefamily.annotation.*;
 import cn.smilefamily.bean.BeanDefinition;
+import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
 import com.google.common.base.Strings;
 import javassist.util.proxy.Proxy;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +38,9 @@ public class Context {
      */
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
     private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainer = new ThreadLocal<>();
+
+    private DelayedTaskExecutor propertyEvaluator;
+    private boolean constructionComplete = false;
 
     public Context(Class<?> configClass) {
         this(configClass, null, null);
@@ -75,6 +80,7 @@ public class Context {
 
     public Context(Class<?> configClass, Context parent, String initPropertiesFile) {
         this.parent = parent;
+        propertyEvaluator = new DelayedTaskExecutor(() -> constructionComplete);
         if (!Strings.isNullOrEmpty(initPropertiesFile)) {
             addPropertiesToContext(initPropertiesFile);
         }
@@ -90,7 +96,8 @@ public class Context {
         // Add bean defined within the config class
         buildBeanDefinitionsFromConfigClass(configClass, configClass.getName() + "[" + name + "]");
 
-
+        constructionComplete = true;
+        propertyEvaluator.execute();
         //Add special bean context self.
         addBean(this, "Special bean");
         ContextManager.getInstance().addContext(this);
@@ -131,7 +138,13 @@ public class Context {
             }
             return bd.getProxy();
         }
-        return bd.getBeanInstance();
+        Object beanInstance = bd.getBeanInstance();
+        return beanInstance;
+    }
+
+    public Object getBean(String name, Object defaultValue) {
+        Object bean = getBean(name);
+        return bean == null ? defaultValue : bean;
     }
 
     private void setProxy(BeanDefinition bd) {
@@ -231,7 +244,22 @@ public class Context {
                 properties.load(this.getClass().getResourceAsStream(path));
                 //add properties
                 properties.forEach((key, val) -> {
-                    addBean((String) key, val, propertiesFile);
+                    String keyString = (String) key;
+                    String valString = (String) val;
+                    if (!keyString.contains("${") && !valString.contains("${")) {
+                        addBean(keyString, valString, propertiesFile);
+                        return;
+                    }
+                    propertyEvaluator.addFirst(() -> {
+                        String realKey = BeanUtils.expression(keyString, (placeHolder, defaultVal) -> {
+                            String value = System.getProperty(placeHolder, (String) getBean(placeHolder, defaultVal));
+                            if (value == null) {
+                                throw new BeanInitializationException("placeHolder ${" + placeHolder + "} of " + keyString + " cannot be resolved in " + propertiesFile + ".");
+                            }
+                            return value;
+                        });
+                        addBean(realKey, String.class, propertiesFile, () -> BeanUtils.expression(valString, (name, defaultVal) -> System.getProperty(name, (String) getBean(name, defaultVal))));
+                    });
                 });
             } catch (IOException e) {
                 throw new PropertiesLoadException(e);
@@ -293,6 +321,10 @@ public class Context {
         }
     }
 
+    public void addBeanByFactory(String name, Class<?> clazz, Supplier<Object> factory) {
+        putBean(name, clazz, factory, "add by user@" + new Date());
+    }
+
     /**
      * Add bean to context directly. Used for some special objects.Usually, this bean will be autowired into other beans.
      *
@@ -300,15 +332,20 @@ public class Context {
      * @param bean
      */
     public void addBean(String name, Object bean, String source) {
-        putBean(name, bean, source);
+        putBean(name, bean.getClass(), () -> bean, source);
+    }
+
+    private void addBean(String name, Class<?> clazz, String source, Supplier<Object> factory) {
+        putBean(name, clazz, factory, source);
     }
 
     public void addBean(String name, Object bean) {
-        putBean(name, bean, "add by user@" + new Date());
+        putBean(name, bean.getClass(), () -> bean, "add by user@" + new Date());
     }
 
-    private BeanDefinition putBean(String name, Object bean, String source) {
-        BeanDefinition bd = new BeanDefinition(this, source, name, bean.getClass(), null, bean.getClass().getAnnotation(Export.class), Collections.emptyList(), () -> bean);
+
+    private BeanDefinition putBean(String name, Class<?> clazz, Supplier<Object> factory, String source) {
+        BeanDefinition bd = new BeanDefinition(this, source, name, clazz, null, clazz.getAnnotation(Export.class), Collections.emptyList(), factory);
         addBeanDefinitions(bd);
         return bd;
     }
@@ -328,7 +365,7 @@ public class Context {
      * @param bean
      */
     public void addBeanAndInjectDependencies(String name, Object bean, String source) {
-        BeanDefinition bd = putBean(name, bean, source);
+        BeanDefinition bd = putBean(name, bean.getClass(), () -> bean, source);
         bd.initialize();
     }
 
