@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
 /**
  * 标注bean所属模块，主要用于给aspectj识别Bean所属模块使用。模块用于管理多个context。
  */
-public @interface Module {
-    String value() default "root";
+public @interface Context {
+    String value();
 }

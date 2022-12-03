@@ -93,6 +93,7 @@ public class Context {
 
         //Add special bean context self.
         addBean(this, "Special bean");
+        ContextManager.getInstance().addContext(this);
     }
 
     private Map<String, ConcurrentMap<BeanDefinition, Object>> getScopedContainer() {
@@ -340,8 +341,8 @@ public class Context {
         this.addBeanAndInjectDependencies(bean.getClass().getName(), bean, source);
     }
 
-    public Object inject(String name, Object bean) {
-        BeanDefinition bd = new BeanDefinition(this, name, null, bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+    public Object inject(Object bean) {
+        BeanDefinition bd = new BeanDefinition(this, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
         bd.initialize();
         return bd.getBeanInstance();
     }

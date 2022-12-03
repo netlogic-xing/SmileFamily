@@ -12,5 +12,7 @@ public class Application {
         bc.build();
         HostService service = (HostService) bc.getBean(HostService.class);
         service.doAction();
+        AspectBean aspectBean = new AspectBean("xing");
+        aspectBean.show();
     }
 }
