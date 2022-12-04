@@ -5,35 +5,34 @@
     <parent>
         <artifactId>SmileFamily</artifactId>
         <groupId>cn.smilefamily</groupId>
-        <version>${smile.version}</version>
+        <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>WebFramework</artifactId>
     <packaging>jar</packaging>
     <name>smile-web</name>
-    <version>${smile.web.version}</version>
     <description>Smile-web is a mvc framework for web</description>
     <dependencies>
         <dependency>
             <groupId>cn.smilefamily</groupId>
             <artifactId>SmileCore</artifactId>
-            <version>${smile.core.version}</version>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.13.4.2</version>
         </dependency>
         <dependency>
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf</artifactId>
-            <version>3.0.15.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
         </dependency>
     </dependencies>
 </project>

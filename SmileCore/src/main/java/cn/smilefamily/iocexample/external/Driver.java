@@ -3,7 +3,7 @@ package cn.smilefamily.iocexample.external;
 import cn.smilefamily.annotation.Value;
 public class Driver {
     private String name;
-    @Value(value = "spring.server.port", defaultValue = "1521")
+    @Value(value = "${connection.port:3308}")
     private int port;
 
     public String getName() {

@@ -1,6 +1,7 @@
 package cn.smilefamily.bean;
 
 import cn.smilefamily.annotation.Value;
+import cn.smilefamily.util.BeanUtils;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -18,8 +19,11 @@ public class ValueExtractors {
      */
     public static DependencyValueExtractor getValueExtractor(Class<?> clazz, Value value) {
         return context -> {
-            String val = (String) context.getBean(value.value());
-            val = val == null && value.defaultValue() != null && !value.defaultValue().equals("") ? value.defaultValue() : val;
+            String exp = value.value();
+            String val = BeanUtils.expression(exp, (name, defaultVal) -> {
+                String bean = (String) context.getBean(name);
+                return bean == null ? defaultVal : bean;
+            });
             if (int.class.isAssignableFrom(clazz) || Integer.class.isAssignableFrom(clazz)) {
                 return convert(val, Integer::parseInt);
             }

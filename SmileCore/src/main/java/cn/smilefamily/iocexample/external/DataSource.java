@@ -4,7 +4,7 @@ import cn.smilefamily.annotation.Value;
 
 public class DataSource {
     private String name;
-    @Value("spring.url")
+    @Value("${${nameplate}_url}")
     private String url;
     private Driver driver;
 

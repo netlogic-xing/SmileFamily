@@ -1,10 +1,10 @@
 package cn.smilefamily.iocexample;
 
-import cn.smilefamily.config.BeanConfig;
+import cn.smilefamily.context.Context;
 
 public class ReadExAppConf {
     public static void main(String[] args) {
-        BeanConfig beanConfig = new BeanConfig(ExAppConf.class);
-        beanConfig.buildContext();
+        Context beanConfig = new Context(ExAppConf.class);
+        beanConfig.build();
     }
 }
