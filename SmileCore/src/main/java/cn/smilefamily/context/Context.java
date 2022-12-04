@@ -246,11 +246,11 @@ public class Context {
                 properties.forEach((key, val) -> {
                     String keyString = (String) key;
                     String valString = (String) val;
-                    if (!keyString.contains("${") && !valString.contains("${")) {
+                    if (!valString.contains("${")) {
                         addBean(keyString, valString, propertiesFile);
                         return;
                     }
-                    propertyEvaluator.addFirst(() -> {
+                    propertyEvaluator.addFirst(keyString, () -> {
                         String realKey = BeanUtils.expression(keyString, (placeHolder, defaultVal) -> {
                             String value = System.getProperty(placeHolder, (String) getBean(placeHolder, defaultVal));
                             if (value == null) {
