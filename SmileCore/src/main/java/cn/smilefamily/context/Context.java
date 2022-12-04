@@ -4,6 +4,8 @@ import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.BeanNotFoundException;
 import cn.smilefamily.annotation.*;
 import cn.smilefamily.bean.BeanDefinition;
+import cn.smilefamily.bean.GeneralBeanDefinition;
+import cn.smilefamily.bean.PropertyBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
 import com.google.common.base.Strings;
@@ -232,7 +234,7 @@ public class Context {
             if (bean != null && !bean.name().equals("")) {
                 name = bean.name();
             }
-            return new BeanDefinition(this, source, name, c);
+            return new GeneralBeanDefinition(this, source, name, c);
         }).collect(Collectors.toList());
     }
 
@@ -246,8 +248,8 @@ public class Context {
                 properties.forEach((key, val) -> {
                     String keyString = (String) key;
                     String valString = (String) val;
-                    if (!valString.contains("${")) {
-                        addBean(keyString, valString, propertiesFile);
+                    if (!keyString.contains("${") && !valString.contains("${")) {
+                        addProperty(keyString, valString, propertiesFile);
                         return;
                     }
                     propertyEvaluator.addFirst(keyString, () -> {
@@ -258,7 +260,7 @@ public class Context {
                             }
                             return value;
                         });
-                        addBean(realKey, String.class, propertiesFile, () -> BeanUtils.expression(valString, (name, defaultVal) -> System.getProperty(name, (String) getBean(name, defaultVal))));
+                        addProperty(realKey, propertiesFile, () -> BeanUtils.expression(valString, (name, defaultVal) -> System.getProperty(name, (String) getBean(name, defaultVal))));
                     });
                 });
             } catch (IOException e) {
@@ -281,7 +283,7 @@ public class Context {
     }
 
     private void buildBeanDefinitionsFromConfigClass(Class<?> configClass, String source) {
-        BeanDefinition configDefinition = BeanDefinition.create(this, source, configClass);
+        BeanDefinition configDefinition = new GeneralBeanDefinition(this, source, configClass.getName(), configClass);
         addBeanDefinitions(configDefinition);
         addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> {
             return m.isAnnotationPresent(Bean.class);
@@ -295,9 +297,9 @@ public class Context {
             if (scope != null) {
                 scopeValue = scope.value();
             }
-            return new BeanDefinition(this, configClass.getName() + "." + m.getName() + "()", name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m), () -> {
-                return BeanUtils.invoke(m, getBean(configDefinition.getName()), this.getBeans(m.getParameterTypes()));
-            });
+            return new GeneralBeanDefinition(this, configClass.getName() + "." + m.getName() + "()",
+                    name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
+                    () -> BeanUtils.invoke(m, getBean(configDefinition.getName()), this.getBeans(m.getParameterTypes())));
         }).collect(Collectors.toList()));
         Configuration configuration = configClass.getAnnotation(Configuration.class);
         if (configuration != null) {
@@ -339,13 +341,23 @@ public class Context {
         putBean(name, clazz, factory, source);
     }
 
+    private void addProperty(String name, String value, String source) {
+        PropertyBeanDefinition bd = new PropertyBeanDefinition(name, value, source);
+        addBeanDefinitions(bd);
+    }
+
+    private void addProperty(String name, String source, Supplier<?> factory) {
+        PropertyBeanDefinition bd = new PropertyBeanDefinition(name, source, factory);
+        addBeanDefinitions(bd);
+    }
+
     public void addBean(String name, Object bean) {
         putBean(name, bean.getClass(), () -> bean, "add by user@" + new Date());
     }
 
 
-    private BeanDefinition putBean(String name, Class<?> clazz, Supplier<Object> factory, String source) {
-        BeanDefinition bd = new BeanDefinition(this, source, name, clazz, null, clazz.getAnnotation(Export.class), Collections.emptyList(), factory);
+    private GeneralBeanDefinition putBean(String name, Class<?> clazz, Supplier<Object> factory, String source) {
+        GeneralBeanDefinition bd = new GeneralBeanDefinition(this, source, name, clazz, null, clazz.getAnnotation(Export.class), Collections.emptyList(), factory);
         addBeanDefinitions(bd);
         return bd;
     }
@@ -365,7 +377,7 @@ public class Context {
      * @param bean
      */
     public void addBeanAndInjectDependencies(String name, Object bean, String source) {
-        BeanDefinition bd = putBean(name, bean.getClass(), () -> bean, source);
+        GeneralBeanDefinition bd = putBean(name, bean.getClass(), () -> bean, source);
         bd.initialize();
     }
 
@@ -379,13 +391,13 @@ public class Context {
     }
 
     public Object inject(Object bean) {
-        BeanDefinition bd = new BeanDefinition(this, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+        GeneralBeanDefinition bd = new GeneralBeanDefinition(this, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
         bd.initialize();
         return bd.getBeanInstance();
     }
 
     public Object create(Class<?> clazz) {
-        BeanDefinition bd = new BeanDefinition(this, null, clazz.getName(), clazz);
+        GeneralBeanDefinition bd = new GeneralBeanDefinition(this, null, clazz.getName(), clazz);
         bd.initialize();
         return bd.getBeanInstance();
     }
