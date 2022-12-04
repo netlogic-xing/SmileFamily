@@ -26,6 +26,26 @@ Smile家族包括:
 2. SmileWebFramework----Web MVC开发框架
 3. SmileBoot----all-in-one的开发框架
 4. SmileTemplate----简单server端模版语言
+# Todo List
+
+- [ ] 事件的支持
+- [ ] 模块化支持
+    - [x] Bean的导入导出
+    - [ ] 模块的封装形式
+- [ ] @AliasFor的支持
+- [ ] Bean别名的支持
+- [ ] Schedule的支持
+- [ ] 拦截器/装饰器的支持
+- [ ] yml/json配置支持
+- [ ] 重新抽象接口，稳定接口
+- [ ] 文档
+    - [ ] 推广PPT
+    - [ ] 设计文档
+    - [ ] Getting started
+    - [ ] User manuals
+- [ ] SmileTemplate完善
+- [ ] 对JDBC/JPA等的封装
+- [ ] vert.x/异步方式支持
 
 --------------------
 >此分支采用aspectj实现
