@@ -7,17 +7,14 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionEvent;
-import javax.servlet.http.HttpSessionListener;
+import javax.servlet.http.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
  * "Springboot"程序启动类基类
  */
-public class WebApplication extends Application {
+public class WebApplication extends Application{
     private static final Logger logger = LoggerFactory
             .getLogger(WebApplication.class);
     private JettyServer jettyServer;
@@ -35,13 +32,13 @@ public class WebApplication extends Application {
 
             @Override
             public void requestInitialized(ServletRequestEvent sre) {
-                logger.info("request create @" + Thread.currentThread() + "@" + sre.getServletRequest());
+                logger.info("request create @" + Thread.currentThread()+"@" + sre.getServletRequest());
                 getApplicationContext().createScope("request", new ConcurrentHashMap<>());
                 HttpServletRequest request = (HttpServletRequest) sre.getServletRequest();
                 HttpSession session = request.getSession();//force create session to trigger session created event.
                 ConcurrentMap<BeanDefinition, Object> sessionScopedContext = (ConcurrentMap<BeanDefinition, Object>) session.getAttribute("smile.session.scope.context");
-                if (sessionScopedContext == null) {
-                    sessionScopedContext = new ConcurrentHashMap<>();
+                if(sessionScopedContext == null){
+                    sessionScopedContext  = new ConcurrentHashMap<>();
                     session.setAttribute("smile.session.scope.context", sessionScopedContext);
                 }
                 getApplicationContext().createScope("session", sessionScopedContext);
@@ -51,7 +48,7 @@ public class WebApplication extends Application {
             @Override
             public void sessionCreated(HttpSessionEvent se) {
 //                HttpSession session = se.getSession();
-//                ConcurrentMap<GeneralBeanDefinition, Object> sessionScopedContext  = new ConcurrentHashMap<>();
+//                ConcurrentMap<BeanDefinition, Object> sessionScopedContext  = new ConcurrentHashMap<>();
 //                session.setAttribute("smile.session.scope.context", sessionScopedContext);
 //                getApplicationContext().createScope("session", sessionScopedContext);
             }
@@ -62,8 +59,7 @@ public class WebApplication extends Application {
             }
         });
     }
-
-    public void start() {
+    public void start(){
         try {
             jettyServer.start();
         } catch (Exception e) {
