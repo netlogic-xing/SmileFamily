@@ -48,7 +48,7 @@ public class WebApplication extends Application{
             @Override
             public void sessionCreated(HttpSessionEvent se) {
 //                HttpSession session = se.getSession();
-//                ConcurrentMap<BeanDefinition, Object> sessionScopedContext  = new ConcurrentHashMap<>();
+//                ConcurrentMap<GeneralBeanDefinition, Object> sessionScopedContext  = new ConcurrentHashMap<>();
 //                session.setAttribute("smile.session.scope.context", sessionScopedContext);
 //                getApplicationContext().createScope("session", sessionScopedContext);
             }

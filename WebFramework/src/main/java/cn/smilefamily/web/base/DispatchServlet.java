@@ -1,9 +1,9 @@
 package cn.smilefamily.web.base;
 
+import cn.smilefamily.context.BeanContext;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import cn.smilefamily.context.Context;
 import cn.smilefamily.web.ControllerConfigException;
 import cn.smilefamily.web.WebConfigNotFoundException;
 import cn.smilefamily.web.annotation.Controller;
@@ -25,7 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DispatchServlet extends HttpServlet {
-    private Context context;
+    private BeanContext beanContext;
     private Table<String, Pattern, RequestHandler> controllerMethods;
 
     private String path(HttpServletRequest req) {
@@ -84,16 +84,16 @@ public class DispatchServlet extends HttpServlet {
         }
         Class<?> webConfigClass = classes.stream().findFirst().orElseThrow(() -> new WebConfigNotFoundException("No class annotated by @WebConfiguration Found!"));
         log("Using web config class: " + webConfigClass.getName());
-        context = new Context(webConfigClass, (Context) this.getServletContext().getAttribute(Context.class.getName()));
+        beanContext = new BeanContext(webConfigClass, (BeanContext) this.getServletContext().getAttribute(BeanContext.class.getName()));
         //直接注入servletConfig和servletContext
-        context.addBean(ServletConfig.class.getName(), this.getServletConfig(), "servlet init");
-        context.addBean(ServletContext.class.getName(), this.getServletContext(), "servlet init");
-        context.build();
+        beanContext.addBean(ServletConfig.class.getName(), this.getServletConfig(), "servlet init");
+        beanContext.addBean(ServletContext.class.getName(), this.getServletContext(), "servlet init");
+        beanContext.build();
         //把BeanContext放到静态类方便后续方法中使用
-        BeanContextHolder.setContext(context);
+        BeanContextHolder.setContext(beanContext);
 
         controllerMethods = HashBasedTable.create();
-        List<?> controllers = context.getBeansByAnnotation(Controller.class);
+        List<?> controllers = beanContext.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {
             RequestMapping baseMapping = controller.getClass().getAnnotation(RequestMapping.class);
             final String baseUri = baseMapping == null ? "" : Strings.nullToEmpty(baseMapping.value());

@@ -15,39 +15,39 @@ public class ContextManager {
     private static final Logger logger = getLogger(ContextManager.class);
     private static ContextManager instance = new ContextManager();
 
-    private AtomicReference<Context> rootContext = new AtomicReference<>();
+    private AtomicReference<BeanContext> rootContext = new AtomicReference<>();
 
-    private ConcurrentMap<String, Context> children = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, BeanContext> children = new ConcurrentHashMap<>();
 
-    public Context getRootContext() {
+    public BeanContext getRootContext() {
         return rootContext.get();
     }
 
-    public void addContext(Context child) {
+    public void addContext(BeanContext child) {
         //默认把第一个context设置为root
         if (rootContext.compareAndSet(null, child)) {
             return;
         }
-        Context old = children.putIfAbsent(child.getName(), child);
+        BeanContext old = children.putIfAbsent(child.getName(), child);
         child.setParent(rootContext.get());
         rootContext.get().importBeanDefinitions(child.export());
         if (old != null) {
-            logger.info("Context " + child.getName() + " is replaced.");
+            logger.info("BeanContext " + child.getName() + " is replaced.");
         }
     }
 
-    public Context getContext(String name) {
+    public BeanContext getContext(String name) {
 
-        Context context = children.get(name);
-        if (context == null) {
+        BeanContext beanContext = children.get(name);
+        if (beanContext == null) {
             return rootContext.get();
         }
-        return context;
+        return beanContext;
     }
 
-    public void setRootContext(Context rootContext) {
+    public void setRootContext(BeanContext rootContext) {
         //显式设置root后，原来默认root降级为child
-        Context old = this.rootContext.getAndSet(rootContext);
+        BeanContext old = this.rootContext.getAndSet(rootContext);
         if (old != null) {
             addContext(old);
         }

@@ -138,13 +138,13 @@ public class AClass{
 public class Main{
     public static void main(String[] args) {
         BeanConfig bc = new BeanConfig(AppConfig.class);
-        bc.registerBean(AClass.class);//a bean can be registered even if bean config is created(context not built yet)
+        bc.registerBean(AClass.class);//a bean can be registered even if bean config is created(beanContext not built yet)
         bc.buildContext();
-        bc.registerBean(BClass.class);//a bean can be registered after context built, if its dependencies were in context.
+        bc.registerBean(BClass.class);//a bean can be registered after beanContext built, if its dependencies were in beanContext.
     }
 }
 ```
-2. Add an object to bean context. The dependencies of this object will be injected.
+2. Add an object to bean beanContext. The dependencies of this object will be injected.
 ```java
 public class CClass{
     private String name;
@@ -156,10 +156,10 @@ public class CClass{
 }
 public class Main{
     public static void main(String[] args) {
-        Context context = new Context(AppConfig.class);
-        context.build();
+        Context beanContext = new Context(AppConfig.class);
+        beanContext.build();
         CClass c = new CClass("test");
-        context.addBean(c);//default bean name is class name.
+        beanContext.addBean(c);//default bean name is class name.
     }
 }
 ```
@@ -170,20 +170,20 @@ public class Main{
         BeanConfig bc = new BeanConfig(AppConfig.class); 
         bc.buildContext();
         CClass c = new CClass("test");
-        bc.addBean("cInstance", (context)->{
+        bc.addBean("cInstance", (beanContext)->{
             return new CClass();
         });//default bean name is class name.
     }
 }
 ```
-4. create a bean by bean context.
+4. create a bean by bean beanContext.
 ```java
 public class Main{
     public static void main(String[] args) {
         BeanConfig bc = new BeanConfig(AppConfig.class); 
         bc.buildContext();
-        Context context = bc.getContext();
-        CClass c = context.createBean(new CClass()); //c will be injected but c is not in context.
+        Context beanContext = bc.getContext();
+        CClass c = beanContext.createBean(new CClass()); //c will be injected but c is not in beanContext.
     }
 }
 ```

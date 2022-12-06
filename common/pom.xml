@@ -11,5 +11,16 @@
     <artifactId>common</artifactId>
     <name>smile common</name>
     <description>Commons and utilities for other module</description>
-
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.snakeyaml/snakeyaml-engine -->
+        <dependency>
+            <groupId>org.snakeyaml</groupId>
+            <artifactId>snakeyaml-engine</artifactId>
+            <version>2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+    </dependencies>
 </project>

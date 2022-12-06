@@ -1,8 +1,8 @@
 package cn.smilefamily.bean;
 
-import cn.smilefamily.context.Context;
+import cn.smilefamily.context.BeanFactory;
 
 @FunctionalInterface
 public interface DependencyValueExtractor {
-    public Object extract(Context context);
+    public Object extract(BeanFactory beanFactory);
 }

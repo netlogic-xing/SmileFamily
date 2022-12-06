@@ -1,7 +1,7 @@
 package cn.smilefamily.bean;
 
 import cn.smilefamily.BeanNotFoundException;
-import cn.smilefamily.context.Context;
+import cn.smilefamily.context.BeanFactory;
 
 import java.util.function.Consumer;
 
@@ -15,8 +15,8 @@ public record Dependency(String name, boolean required, String description, bool
         this(name, required, description, external, context -> context.getBean(name));
     }
 
-    public void setDepValue(Context context, Consumer<Object> assigner) {
-        Object val = this.extractor.extract(context);
+    public void setDepValue(BeanFactory beanFactory, Consumer<Object> assigner) {
+        Object val = this.extractor.extract(beanFactory);
         if (val == null && required) {
             throw new BeanNotFoundException(name + " not found. " + (external ? " This dependency is external. " : "") + description);
         } else if (val != null) {
@@ -24,8 +24,8 @@ public record Dependency(String name, boolean required, String description, bool
         }
     }
 
-    public Object getDepValue(Context context) {
-        Object val = this.extractor.extract(context);
+    public Object getDepValue(BeanFactory beanFactory) {
+        Object val = this.extractor.extract(beanFactory);
         if (val == null && required) {
             throw new BeanNotFoundException(name + " not found. " + (external ? " This dependency is external. " : "") + description);
         }

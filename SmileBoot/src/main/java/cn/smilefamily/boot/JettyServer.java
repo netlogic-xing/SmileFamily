@@ -1,7 +1,8 @@
 package cn.smilefamily.boot;
 
 import cn.smilefamily.annotation.Value;
-import cn.smilefamily.context.Context;
+import cn.smilefamily.context.BeanContext;
+import cn.smilefamily.context.BeanFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -29,8 +30,8 @@ public class JettyServer {
         server.setHandler(servletHandler);
         server.start();
     }
-    public void setApplicationContent(Context context){
-        servletHandler.getServletContext().setAttribute(Context.class.getName(), context);
+    public void setApplicationContent(BeanFactory beanContext){
+        servletHandler.getServletContext().setAttribute(BeanContext.class.getName(), beanContext);
     }
     public void addEventListener(EventListener listener) {
         servletHandler.addEventListener(listener);

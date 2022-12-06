@@ -1,15 +1,15 @@
 package cn.smilefamily.boot;
 
 
-import cn.smilefamily.context.Context;
+import cn.smilefamily.context.BeanContext;
 
 public class Application {
-    private Context applicationContext;
+    private BeanContext applicationBeanContext;
     public Application() {
-        applicationContext = new Context("classpath:/application.properties");
-        applicationContext.build();
+        applicationBeanContext = new BeanContext("classpath:/application.properties");
+        applicationBeanContext.build();
     }
-    public Context getApplicationContext() {
-        return applicationContext;
+    public BeanContext getApplicationContext() {
+        return applicationBeanContext;
     }
 }

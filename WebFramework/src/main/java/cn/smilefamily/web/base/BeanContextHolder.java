@@ -1,17 +1,17 @@
 package cn.smilefamily.web.base;
 
-import cn.smilefamily.context.Context;
+import cn.smilefamily.context.BeanFactory;
 
 /**
- * Hold Bean Context. Note: It only valid after BeanConfig is built.
+ * Hold Bean BeanContext. Note: It only valid after BeanConfig is built.
  */
 public class BeanContextHolder {
-    private static Context context;
-    public static void setContext(Context ctx){
+    private static BeanFactory context;
+    public static void setContext(BeanFactory ctx){
         context = ctx;
     }
 
-    public static Context getContext(){
+    public static BeanFactory getContext(){
         return context;
     }
 }
