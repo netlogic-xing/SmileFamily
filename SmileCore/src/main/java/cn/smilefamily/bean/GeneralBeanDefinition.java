@@ -267,7 +267,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     External external = f.getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
                     String name = BeanUtils.getBeanName(f, f.getType().getName());
-                    return new Dependency(name, injected.required(), desc, external != null);
+                    return new Dependency(name, f.getType(), injected.required(), desc, external != null);
                 }));
         //@Value Field依赖
         Map<Field, Dependency> valueFields = Arrays.stream(this.type.getDeclaredFields())
@@ -277,8 +277,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     String valueExpression = valueAnnotation.value();
                     External external = f.getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
-                    DependencyValueExtractor extractor = ValueExtractors.getValueExtractor(f.getType(), valueAnnotation);
-                    return new Dependency(valueExpression, false, desc, external != null, extractor);
+                    return new Dependency(valueExpression, f.getType(), false, desc, external != null);
                 }));
         fieldDependencies.putAll(valueFields);
         //@Injected方法的参数依赖

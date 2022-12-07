@@ -5,7 +5,6 @@ import cn.smilefamily.annotation.External;
 import cn.smilefamily.annotation.Injected;
 import cn.smilefamily.annotation.Value;
 import cn.smilefamily.bean.Dependency;
-import cn.smilefamily.bean.ValueExtractors;
 import cn.smilefamily.context.SimpleExpressionSyntaxException;
 import org.reflections.Reflections;
 
@@ -186,15 +185,13 @@ public class BeanUtils {
             String desc = external == null ? "" : external.value();
             if (p.isAnnotationPresent(Value.class)) {
                 Value value = p.getAnnotation(Value.class);
-                return new Dependency(value.value(), false, desc, external != null,
-                        ValueExtractors.getValueExtractor(p.getType(), value)
-                );
+                return new Dependency(value.value(), p.getType(), false, desc, external != null);
             }
             String beanName = getBeanName(p, p.getType().getName());
             if (p.isAnnotationPresent(Injected.class)) {
-                return new Dependency(beanName, p.getAnnotation(Injected.class).required(), desc, external != null);
+                return new Dependency(beanName, p.getType(), p.getAnnotation(Injected.class).required(), desc, external != null);
             }
-            return new Dependency(beanName, desc, external != null);
+            return new Dependency(beanName, p.getType(), false, desc, external != null);
         }).toList();
     }
 }

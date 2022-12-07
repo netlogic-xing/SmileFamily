@@ -1,139 +1,56 @@
-2022-12-04 08:32:56,421 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 56 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 08:32:56,455 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 08:32:56,474 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 08:39:47,657 INFO [main] org.eclipse.jetty.server.Server [Server.java : 384] jetty-10.0.12; built: 2022-09-14T01:54:40.076Z; git: 408d0139887e27a57b54ed52e2d92a36731a7e88; jvm 17.0.1+12-LTS-39
-2022-12-04 08:39:47,721 INFO [main] o.e.j.s.s.DefaultSessionIdManager [DefaultSessionIdManager.java : 332] Session workerName=node0
-2022-12-04 08:39:47,738 INFO [main] o.e.j.server.handler.ContextHandler [ContextHandler.java : 905] Started o.e.j.s.ServletContextHandler@5fbdfdcf{/,file:///Users/chenyangxing/git/SmileFamily/SmileBoot/target/classes/,AVAILABLE}
-2022-12-04 08:39:47,753 INFO [main] o.e.jetty.server.AbstractConnector [AbstractConnector.java : 376] Started ServerConnector@557caf28{HTTP/1.1, (http/1.1)}{0.0.0.0:8080}
-2022-12-04 08:39:47,764 INFO [main] org.eclipse.jetty.server.Server [Server.java : 439] Started Server@45c7e403{STARTING}[10.0.12,sto=0] @782ms
-2022-12-04 08:39:51,245 INFO [qtp2073707154-22] cn.smilefamily.boot.WebApplication [WebApplication.java : 35] request create @Thread[qtp2073707154-22,5,main]@Request(GET http://localhost:8080/hello)@3b4a95ec
-2022-12-04 08:39:51,246 INFO [qtp2073707154-22] cn.smilefamily.context.BeanContexttext [Context.java : 173] create request beanContext Thread[qtp2073707154-22,5,main]
-2022-12-04 08:39:51,258 INFO [qtp2073707154-22] cn.smilefamily.context.BeanContexttext [Context.java : 173] create session beanContext Thread[qtp2073707154-22,5,main]
-2022-12-04 08:39:52,285 INFO [qtp2073707154-22] org.reflections.Reflections [Reflections.java : 219] Reflections took 1012 ms to scan 33 urls, producing 1853 keys and 10310 values
-2022-12-04 08:39:52,463 INFO [qtp2073707154-22] o.e.j.s.handler.ContextHandler.ROOT [ContextHandler.java : 2352] cn.smilefamily.web.base.DispatchServlet-dbf57b3: Using web config class: cn.smilefamily.bootexample.Main
-2022-12-04 08:39:52,475 INFO [qtp2073707154-22] org.reflections.Reflections [Reflections.java : 219] Reflections took 3 ms to scan 1 urls, producing 6 keys and 12 values
-2022-12-04 08:39:52,819 INFO [qtp2073707154-22] cn.smilefamily.context.BeanContexttext [Context.java : 183] destroy request beanContext
-2022-12-04 08:39:56,881 INFO [qtp2073707154-18] cn.smilefamily.boot.WebApplication [WebApplication.java : 35] request create @Thread[qtp2073707154-18,5,main]@Request(GET http://localhost:8080/hello)@3b4a95ec
-2022-12-04 08:39:56,885 INFO [qtp2073707154-18] cn.smilefamily.context.BeanContexttext [Context.java : 173] create request beanContext Thread[qtp2073707154-18,5,main]
-2022-12-04 08:39:56,886 INFO [qtp2073707154-18] cn.smilefamily.context.BeanContexttext [Context.java : 173] create session beanContext Thread[qtp2073707154-18,5,main]
-2022-12-04 08:39:56,889 INFO [qtp2073707154-18] cn.smilefamily.context.BeanContexttext [Context.java : 183] destroy request beanContext
-2022-12-04 11:19:00,072 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 70 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 11:19:00,105 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 16 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 11:19:00,129 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 17 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 16:41:16,157 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 54 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 16:41:16,186 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 15 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 16:41:16,202 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 9 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 17:32:39,467 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 53 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 17:32:39,495 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 17:32:39,513 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:04:46,881 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 50 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:04:46,907 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:04:46,932 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:06:00,773 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 47 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:06:00,800 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:06:00,818 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:06:00,841 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:06:00,847 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:06:00,856 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:06:00,858 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:06:00,859 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:08:18,777 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 43 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:08:18,802 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:08:18,818 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:08:18,840 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:08:18,845 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:08:18,852 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:08:18,854 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:08:18,855 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:10:21,795 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 83 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:10:21,843 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 23 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:10:21,870 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 19 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:10:21,901 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:10:21,906 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:10:21,914 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:10:21,916 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:10:21,916 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:12:46,362 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 52 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:12:46,389 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:12:46,408 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:12:46,432 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:12:46,437 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:12:46,446 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:12:46,448 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:12:46,448 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:13:11,860 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 44 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:13:11,884 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:13:11,901 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 11 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:13:11,923 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:13:11,928 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 3 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:13:11,936 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:13:11,939 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:13:11,939 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:14:00,503 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 50 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:14:00,532 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:14:00,553 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:14:00,579 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:14:00,585 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:14:00,596 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 9 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:14:00,599 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:14:00,600 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-04 18:23:19,868 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 52 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:23:19,896 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 15 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:23:19,913 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:23:19,939 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-04 18:23:19,946 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-04 18:23:19,953 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-04 18:23:19,956 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean @host-type is replaced
-2022-12-04 18:23:19,957 INFO [main] cn.smilefamily.context.BeanContexttext [Context.java : 280] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-06 10:50:29,746 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 60 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 10:50:29,773 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 10:50:29,793 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 10:51:26,413 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 57 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 10:51:26,442 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 15 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 10:51:26,462 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 10:51:26,491 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 10:51:26,499 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 10:51:26,510 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 10 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 10:51:26,514 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 267] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-06 10:52:40,436 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 46 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 10:52:40,458 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 11 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 10:52:40,477 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 10:52:40,506 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 10:52:40,512 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 10:52:40,521 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 10:52:40,524 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 267] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-06 19:04:52,645 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 61 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 19:18:16,897 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 58 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 19:18:16,924 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 19:18:16,939 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 11 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 19:18:16,977 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 9 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 19:18:16,987 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 19:18:17,000 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 11 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 19:18:17,007 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 268] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-06 20:32:04,599 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 55 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 20:32:04,629 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 16 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 20:32:04,649 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 20:32:04,671 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
-2022-12-06 20:32:04,678 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 1 keys and 1 values
-2022-12-06 20:32:04,687 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
-2022-12-06 20:32:04,688 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 249] Bean cn.smilefamily.iocexample.external.Driver is replaced
-2022-12-06 20:33:19,193 INFO [main] org.eclipse.jetty.server.Server [Server.java : 384] jetty-10.0.12; built: 2022-09-14T01:54:40.076Z; git: 408d0139887e27a57b54ed52e2d92a36731a7e88; jvm 17.0.1+12-LTS-39
-2022-12-06 20:33:19,257 INFO [main] o.e.j.s.s.DefaultSessionIdManager [DefaultSessionIdManager.java : 332] Session workerName=node0
-2022-12-06 20:33:19,274 INFO [main] o.e.j.server.handler.ContextHandler [ContextHandler.java : 905] Started o.e.j.s.ServletContextHandler@fa49800{/,file:///Users/chenyangxing/git/SmileFamily/SmileBoot/target/classes/,AVAILABLE}
-2022-12-06 20:33:19,289 INFO [main] o.e.jetty.server.AbstractConnector [AbstractConnector.java : 376] Started ServerConnector@5bf0d49{HTTP/1.1, (http/1.1)}{0.0.0.0:8080}
-2022-12-06 20:33:19,300 INFO [main] org.eclipse.jetty.server.Server [Server.java : 439] Started Server@24aed80c{STARTING}[10.0.12,sto=0] @865ms
-2022-12-06 20:33:23,561 INFO [qtp173099767-22] cn.smilefamily.boot.WebApplication [WebApplication.java : 35] request create @Thread[qtp173099767-22,5,main]@Request(GET http://localhost:8080/hello)@3a8aacc
-2022-12-06 20:33:23,561 INFO [qtp173099767-22] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create request context Thread[qtp173099767-22,5,main]
-2022-12-06 20:33:23,573 INFO [qtp173099767-22] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create session context Thread[qtp173099767-22,5,main]
-2022-12-06 20:33:24,434 INFO [qtp173099767-22] org.reflections.Reflections [Reflections.java : 219] Reflections took 847 ms to scan 34 urls, producing 1885 keys and 10481 values
-2022-12-06 20:33:24,647 INFO [qtp173099767-22] o.e.j.s.handler.ContextHandler.ROOT [ContextHandler.java : 2352] cn.smilefamily.web.base.DispatchServlet-6e171cd7: Using web config class: cn.smilefamily.bootexample.Main
-2022-12-06 20:33:24,660 INFO [qtp173099767-22] org.reflections.Reflections [Reflections.java : 219] Reflections took 3 ms to scan 1 urls, producing 6 keys and 12 values
-2022-12-06 20:33:25,004 INFO [qtp173099767-22] cn.smilefamily.context.BeanContext [BeanContext.java : 194] destroy request context
-2022-12-06 20:33:30,978 INFO [qtp173099767-18] cn.smilefamily.boot.WebApplication [WebApplication.java : 35] request create @Thread[qtp173099767-18,5,main]@Request(GET http://localhost:8080/hello)@3a8aacc
-2022-12-06 20:33:30,978 INFO [qtp173099767-18] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create request context Thread[qtp173099767-18,5,main]
-2022-12-06 20:33:30,979 INFO [qtp173099767-18] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create session context Thread[qtp173099767-18,5,main]
-2022-12-06 20:33:30,981 INFO [qtp173099767-18] cn.smilefamily.context.BeanContext [BeanContext.java : 194] destroy request context
-2022-12-06 20:33:32,265 INFO [qtp173099767-24] cn.smilefamily.boot.WebApplication [WebApplication.java : 35] request create @Thread[qtp173099767-24,5,main]@Request(GET http://localhost:8080/hello)@3a8aacc
-2022-12-06 20:33:32,265 INFO [qtp173099767-24] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create request context Thread[qtp173099767-24,5,main]
-2022-12-06 20:33:32,265 INFO [qtp173099767-24] cn.smilefamily.context.BeanContext [BeanContext.java : 183] create session context Thread[qtp173099767-24,5,main]
-2022-12-06 20:33:32,267 INFO [qtp173099767-24] cn.smilefamily.context.BeanContext [BeanContext.java : 194] destroy request context
+2022-12-07 20:52:16,639 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 64 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:52:16,675 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 15 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:52:16,691 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 11 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:52:16,711 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:52:16,716 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:52:16,729 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:52:16,731 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 20:52:48,964 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 58 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:52:54,862 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:52:54,876 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 9 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:52:54,904 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:52:54,909 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:52:54,916 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:52:54,917 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 20:53:48,266 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 47 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:53:48,289 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 10 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:53:48,301 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:53:57,821 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:53:57,829 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:53:57,837 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:53:57,839 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 20:54:54,450 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 67 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:54:54,494 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 23 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:54:54,537 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 30 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:54:54,573 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:54:54,581 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:54:54,592 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 9 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:54:54,594 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 20:55:38,359 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 62 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:55:38,399 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 19 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:55:38,418 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 13 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:55:38,445 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:55:38,451 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:55:38,460 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:55:38,461 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 20:57:44,126 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 102 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:57:44,164 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 17 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:57:44,185 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 15 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:57:44,211 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 20:57:44,216 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 4 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 20:57:44,223 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 20:57:44,225 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 21:01:29,114 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 43 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 21:01:29,141 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 21:01:29,161 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 14 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 21:01:29,182 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 6 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 21:01:29,188 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 5 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 21:01:29,196 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 21:01:29,198 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced
+2022-12-07 21:05:33,036 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 54 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 21:05:33,060 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 21:05:33,076 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 12 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 21:05:33,101 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 0 keys and 0 values
+2022-12-07 21:05:33,110 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 7 ms to scan 1 urls, producing 1 keys and 1 values
+2022-12-07 21:05:33,121 INFO [main] org.reflections.Reflections [Reflections.java : 219] Reflections took 8 ms to scan 1 urls, producing 4 keys and 8 values
+2022-12-07 21:05:33,124 INFO [main] cn.smilefamily.context.BeanContext [BeanContext.java : 258] Bean cn.smilefamily.iocexample.external.Driver is replaced

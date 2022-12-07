@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface BeanFactory {
-    Object getBean(String name);
+    <T> T getBean(String name);
+    <T> T getBean(String name, Class<T> beanClass);
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation);
     public default Object getBean(Class<?> clazz) {
         return getBean(clazz.getName());

@@ -4,7 +4,6 @@ import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.*;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.GeneralBeanDefinition;
-import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
 import com.google.common.base.Strings;
 import javassist.util.proxy.Proxy;
@@ -39,6 +38,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
      */
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
     private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainer = new ThreadLocal<>();
+    private boolean initialized;
 
     public BeanContext(Class<?> configClass) {
         this(configClass, null, null);
@@ -99,7 +99,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
 
         //Add special bean context self.
         addBean(this, "Special bean");
-        ContextManager.getInstance().addContext(this);
+        ApplicationManager.getInstance().addContext(this);
     }
 
     private Map<String, ConcurrentMap<BeanDefinition, Object>> getScopedContainer() {
@@ -117,19 +117,24 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
      * @return
      */
     @Override
-    public Object getBean(String name) {
+    public <T> T getBean(String name) {
+      return (T) getBean(name, Object.class);
+    }
+
+    @Override
+    public <T> T getBean(String name, Class<T> beanClass) {
         Object bean = getBeanInThisContext(name);
         if (bean != null) {
-            return bean;
+            return (T) bean;
         }
         for (Context context : attachedContexts) {
-            bean = context.getBean(name);
+            bean = context.getBean(name, beanClass);
             if (bean != null) {
-                return bean;
+                return (T) bean;
             }
         }
         if (parent != null) {
-            return parent.getBean(name);
+            return parent.getBean(name, beanClass);
         }
         return null;
     }
@@ -218,9 +223,13 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
 
     @Override
     public void build() {
+        if (initialized) {
+            return;
+        }
         beanDefinitions.values().forEach(bd -> {
             bd.initialize();
         });
+        initialized = true;
     }
 
     private List<BeanDefinition> buildBeanDefinitionsFromPackage(String packageName, String source) {

@@ -11,9 +11,10 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * 管理多个context
  */
-public class ContextManager {
-    private static final Logger logger = getLogger(ContextManager.class);
-    private static ContextManager instance = new ContextManager();
+public class ApplicationManager {
+    private static final Logger logger = getLogger(ApplicationManager.class);
+    private static ApplicationManager instance = new ApplicationManager();
+    private boolean initialized = false;
 
     private AtomicReference<BeanContext> rootContext = new AtomicReference<>();
 
@@ -53,10 +54,21 @@ public class ContextManager {
         }
     }
 
-    public static ContextManager getInstance() {
+    public void start() {
+        if (initialized) {
+            return;
+        }
+        this.rootContext.get().build();
+        children.values().forEach(context -> {
+            context.build();
+        });
+        initialized = true;
+    }
+
+    public static ApplicationManager getInstance() {
         return instance;
     }
 
-    private ContextManager() {
+    private ApplicationManager() {
     }
 }

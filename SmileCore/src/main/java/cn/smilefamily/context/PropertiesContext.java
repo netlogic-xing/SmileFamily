@@ -8,10 +8,8 @@ import cn.smilefamily.util.BeanUtils;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * 代表一个属性文件的context，仅共host context内部使用。
@@ -73,14 +71,50 @@ public class PropertiesContext implements Context {
      * @return
      */
     @Override
-    public Object getBean(String name) {
+    public <T> T getBean(String name) {
         BeanDefinition bd = beanDefinitions.get(name);
         if (bd != null) {
-            return bd.getBeanInstance();
+            return (T) bd.getBeanInstance();
         }
-        return properties.getProperty(name);
+        return (T) properties.getProperty(name);
     }
 
+    @Override
+    public <T> T getBean(String nameExpression, Class<T> clazz) {
+        String val = BeanUtils.expression(nameExpression, (name, defaultVal) -> {
+            String bean = (String) getBean(name);
+            return bean == null ? defaultVal : bean;
+        });
+        if (int.class.isAssignableFrom(clazz) || Integer.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Integer::parseInt);
+        }
+        if (short.class.isAssignableFrom(clazz) || Short.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Short::parseShort);
+        }
+        if (long.class.isAssignableFrom(clazz) || Long.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Long::parseLong);
+        }
+        if (float.class.isAssignableFrom(clazz) || Float.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Float::parseFloat);
+        }
+        if (double.class.isAssignableFrom(clazz) || Double.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Double::parseDouble);
+        }
+        if (byte.class.isAssignableFrom(clazz) || Byte.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Byte::parseByte);
+        }
+        if (boolean.class.isAssignableFrom(clazz) || Boolean.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, Boolean::parseBoolean);
+        }
+        if (char.class.isAssignableFrom(clazz) || Character.class.isAssignableFrom(clazz)) {
+            return (T) convert(val, v -> v.charAt(0));
+        }
+        return (T) val;
+    }
+    private Object convert(String value, Function<String, Object> converter) {
+        Optional<String> optionalValue = Optional.ofNullable(value);
+        return optionalValue.map(converter).orElse(null);
+    }
     @Override
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
         throw new UnsupportedOperationException("PropertiesContext doesn't support getBeansByAnnotation");

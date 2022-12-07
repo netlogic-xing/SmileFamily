@@ -5,18 +5,9 @@ import cn.smilefamily.context.BeanFactory;
 
 import java.util.function.Consumer;
 
-public record Dependency(String name, boolean required, String description, boolean external,
-                         DependencyValueExtractor extractor) {
-    public Dependency(String name, String description, boolean external) {
-        this(name, true, description, external, context -> context.getBean(name));
-    }
-
-    public Dependency(String name, boolean required, String description, boolean external) {
-        this(name, required, description, external, context -> context.getBean(name));
-    }
-
+public record Dependency(String name, Class<?> beanClass, boolean required, String description, boolean external) {
     public void setDepValue(BeanFactory beanFactory, Consumer<Object> assigner) {
-        Object val = this.extractor.extract(beanFactory);
+        Object val = beanFactory.getBean(name, beanClass);
         if (val == null && required) {
             throw new BeanNotFoundException(name + " not found. " + (external ? " This dependency is external. " : "") + description);
         } else if (val != null) {
@@ -25,7 +16,7 @@ public record Dependency(String name, boolean required, String description, bool
     }
 
     public Object getDepValue(BeanFactory beanFactory) {
-        Object val = this.extractor.extract(beanFactory);
+        Object val = beanFactory.getBean(name, beanClass);
         if (val == null && required) {
             throw new BeanNotFoundException(name + " not found. " + (external ? " This dependency is external. " : "") + description);
         }
