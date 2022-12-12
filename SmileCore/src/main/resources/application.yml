@@ -1,0 +1,15 @@
+order:
+  orderNo: A001
+  date: 2019-04-17
+  customerName: Customer, Joe
+  orderLines:
+    - item: ${name}
+      quantity: 12
+      unitPrice: 1.23
+    - item: Widget (10mm)
+      quantity: 4
+      unitPrice: 3.5
+---
+Unsupported protocol: http
+---
+name: xingchenayng

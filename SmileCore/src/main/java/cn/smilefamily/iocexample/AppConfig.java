@@ -7,7 +7,8 @@ import cn.smilefamily.annotation.External;
 import cn.smilefamily.iocexample.external.DataSource;
 import cn.smilefamily.iocexample.external.Driver;
 
-@Configuration(scanPackages = {"cn.smilefamily.iocexample.model","cn.smilefamily.iocexample.service","cn.smilefamily.iocexample.external"}, properties = "classpath:/application.properties")
+@Configuration(scanPackages = {"cn.smilefamily.iocexample.model","cn.smilefamily.iocexample.service","cn.smilefamily.iocexample.external"},
+        files = {"classpath:application.properties", "classpath:application.yml"})
 public class AppConfig {
 
     @Bean

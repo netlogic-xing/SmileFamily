@@ -8,7 +8,7 @@ import cn.smilefamily.util.SmileUtils;
 
 public class Application {
     public static void main(String[] args) {
-        SmileUtils.inspectConfig(AppConfig.class);
+       // SmileUtils.inspectConfig(AppConfig.class);
         Context bc = new BeanContext(AppConfig.class);
         bc.build();
         HostService service = (HostService) bc.getBean(HostService.class);

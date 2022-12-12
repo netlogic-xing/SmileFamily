@@ -1,10 +1,15 @@
 package cn.smilefamily.iocexample.external;
 
+import cn.smilefamily.annotation.Injected;
 import cn.smilefamily.annotation.Value;
+
 public class Driver {
     private String name;
-    @Value(value = "${connection.port:3308}")
+    @Value("${connection.port:3308}")
     private int port;
+
+    @Injected(name = "/order")
+    private Order order;
 
     public String getName() {
         return name;
@@ -14,7 +19,8 @@ public class Driver {
     public String toString() {
         return "Driver{" +
                 "name='" + name + '\'' +
-                "port=" + port +
+                ", port=" + port +
+                ", order=" + order +
                 '}';
     }
 

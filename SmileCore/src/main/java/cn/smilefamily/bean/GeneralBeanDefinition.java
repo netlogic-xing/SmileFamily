@@ -88,9 +88,9 @@ public class GeneralBeanDefinition implements BeanDefinition {
     /**
      * 用于在生成JavaConfig中@Bean标注的方法定义的Bean
      *
-     * @param name        Bean名称
-     * @param clazz       Bean类型
-     * @param deps        生成Bean的方法参数，假定全部都能在Context中找到
+     * @param name    Bean名称
+     * @param clazz   Bean类型
+     * @param deps    生成Bean的方法参数，假定全部都能在Context中找到
      * @param factory 闭包，包裹生成Bean的方法及参数
      */
     public GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
@@ -186,7 +186,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
         }
         dependencyStack.addLast(name);
         logger.debug("dependency chains " + dependencyStack.stream().collect(Collectors.joining("->")));
-        if (beanInstance == null ) {//优先采用bean工厂闭包生成Bean
+        if (beanInstance == null) {//优先采用bean工厂闭包生成Bean
             beanInstance = factory.get();
         }
         dependencyStack.removeLast();
@@ -219,7 +219,6 @@ public class GeneralBeanDefinition implements BeanDefinition {
         beanInjectionCompleted = false;
         beanInitialized = false;
     }
-
 
 
     /**
@@ -267,7 +266,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     External external = f.getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
                     String name = BeanUtils.getBeanName(f, f.getType().getName());
-                    return new Dependency(name, f.getType(), injected.required(), desc, external != null);
+                    return new Dependency(name, f.getGenericType(), injected.required(), desc, external != null);
                 }));
         //@Value Field依赖
         Map<Field, Dependency> valueFields = Arrays.stream(this.type.getDeclaredFields())
@@ -277,7 +276,8 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     String valueExpression = valueAnnotation.value();
                     External external = f.getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
-                    return new Dependency(valueExpression, f.getType(), false, desc, external != null);
+                    DependencyValueExtractor extractor = ValueExtractors.getValueExtractor(f.getGenericType(), valueAnnotation);
+                    return new Dependency(valueExpression, String.class, false, desc, external != null, extractor);
                 }));
         fieldDependencies.putAll(valueFields);
         //@Injected方法的参数依赖

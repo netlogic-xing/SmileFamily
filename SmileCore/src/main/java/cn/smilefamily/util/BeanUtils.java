@@ -5,15 +5,37 @@ import cn.smilefamily.annotation.External;
 import cn.smilefamily.annotation.Injected;
 import cn.smilefamily.annotation.Value;
 import cn.smilefamily.bean.Dependency;
+import cn.smilefamily.bean.ValueExtractors;
 import cn.smilefamily.context.SimpleExpressionSyntaxException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.util.JsonParserDelegate;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.reflections.Reflections;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class BeanUtils {
+    private static ObjectMapper mapper;
+
+    static {
+        mapper = new ObjectMapper(new YAMLFactory());
+        mapper.findAndRegisterModules();
+    }
+
     /**
      * 从方法或构造函数的参数及field获取bean名字
      *
@@ -31,6 +53,96 @@ public class BeanUtils {
             name = defaultName;
         }
         return name;
+    }
+
+
+    public static void traverse(JsonNode root, Deque<String> prefixes, BiConsumer<String, String> consumer) {
+        if (root.isObject()) {
+            Iterator<String> fieldNames = root.fieldNames();
+            while (fieldNames.hasNext()) {
+                String fieldName = fieldNames.next();
+                JsonNode fieldValue = root.get(fieldName);
+                prefixes.addLast(fieldName);
+                traverse(fieldValue, prefixes, consumer);
+            }
+            prefixes.pollLast();
+        } else if (root.isArray()) {
+            ArrayNode arrayNode = (ArrayNode) root;
+            String last = prefixes.removeLast();
+            for (int i = 0; i < arrayNode.size(); i++) {
+                JsonNode arrayElement = arrayNode.get(i);
+                prefixes.addLast(last + "[" + i + "]");
+                traverse(arrayElement, prefixes, consumer);
+            }
+        } else {
+            consumer.accept(prefixes.stream().filter(p -> !p.equals("")).collect(Collectors.joining(".")), root.asText());
+            prefixes.removeLast();
+        }
+    }
+
+    public static void iterateYamlDocs(JsonParser parser, Consumer<JsonNode> docConsumer) {
+        try {
+            MappingIterator<JsonNode> list = mapper.readValues(parser, new TypeReference<>() {
+            });
+            for (MappingIterator<JsonNode> it = list; it.hasNext(); ) {
+                JsonNode jsonNode = it.next();
+                docConsumer.accept(jsonNode);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static JsonParser buildParser(String filename) {
+        try {
+            return mapper.createParser(FileUtils.getInputStream(filename));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> T toObject(JsonNode jsonNode, Type beanType) {
+        try {
+            return mapper.treeToValue(jsonNode, mapper.constructType(beanType));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void closeParser(JsonParser parser) {
+        try {
+            parser.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static JsonParser buildExpressionSupportedParser(JsonParser parser, Function<String, String> valueProvider) {
+        JsonParserDelegate delegate = new JsonParserDelegate(parser) {
+            @Override
+            public String getCurrentName() throws IOException {
+                return valueProvider.apply(super.getCurrentName());
+            }
+
+            @Override
+            public String getText() throws IOException {
+                return valueProvider.apply(super.getText());
+            }
+        };
+        return delegate;
+    }
+
+    public static Map<String, String> jsonTreeToProperties(JsonNode jsonNode) {
+        Map<String, String> properties = new HashMap<>();
+        if (jsonNode.isNull() || jsonNode.isTextual() || jsonNode.isArray()) {
+            return properties;
+        }
+        ArrayDeque<String> prefixes = new ArrayDeque<>();
+        prefixes.add("");
+        traverse(jsonNode, prefixes, (key, value) -> {
+            properties.put(key, value);
+        });
+        return properties;
     }
 
     public static String expression(String source, BiFunction<String, String, String> valueProvider) {
@@ -185,13 +297,15 @@ public class BeanUtils {
             String desc = external == null ? "" : external.value();
             if (p.isAnnotationPresent(Value.class)) {
                 Value value = p.getAnnotation(Value.class);
-                return new Dependency(value.value(), p.getType(), false, desc, external != null);
+                return new Dependency(value.value(), String.class, false, desc, external != null,
+                        ValueExtractors.getValueExtractor(p.getType(), value)
+                );
             }
             String beanName = getBeanName(p, p.getType().getName());
             if (p.isAnnotationPresent(Injected.class)) {
-                return new Dependency(beanName, p.getType(), p.getAnnotation(Injected.class).required(), desc, external != null);
+                return new Dependency(beanName, p.getParameterizedType(), p.getAnnotation(Injected.class).required(), desc, external != null);
             }
-            return new Dependency(beanName, p.getType(), false, desc, external != null);
+            return new Dependency(beanName, p.getParameterizedType(), desc, external != null);
         }).toList();
     }
 }

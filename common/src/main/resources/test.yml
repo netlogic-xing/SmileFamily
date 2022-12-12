@@ -52,16 +52,6 @@ rbi:
   - *SS # Subsequent occurrence
   - Ken Griffey
 ---
-?
-  - Detroit Tigers
-  - Chicago cubs
-: - 2001-07-23
-
-? [ New York Yankees,
-    Atlanta Braves ]
-: [ 2001-07-02, 2001-08-12,
-      2001-08-14 ]
----
 # Products purchased
 - item    : Super Hoop
   quantity: 1
@@ -124,8 +114,6 @@ hexadecimal: 0xC
 canonical: 1.23015e+3
 exponential: 12.3015e+02
 fixed: 1230.15
-negative infinity: -.inf
-not a number: .nan
 ---
 anull:
 booleans: [ true, false ]
@@ -139,12 +127,11 @@ date: 2002-12-14
 ---
 not-date: !!str 2002-04-28
 
-picture: !!binary |
+picture: | 
   R0lGODlhDAAMAIQAAP//9/X
   17unp5WZmZgAAAOfn515eXv
   Pz7Y6OjuDg4J+fn5OTk6enp
   56enmleECcgggoBADs=
-
 application specific tag: |
   The semantics of the tag
   above may be different for

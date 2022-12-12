@@ -4,7 +4,10 @@ import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.*;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.GeneralBeanDefinition;
+import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
+import cn.smilefamily.util.FileUtils;
+import com.fasterxml.jackson.core.JsonParser;
 import com.google.common.base.Strings;
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
@@ -12,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
@@ -32,7 +36,19 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
      */
     private BeanContext parent;
 
-    private List<Context> attachedContexts = new ArrayList<>();
+    private PropertiesContext environment;
+    private YamlContext configBeanFactory;
+
+    private DelayedTaskExecutor yamlContextInitExecutor;
+
+    private boolean readyToInitYamlContext;
+    //此方法仅仅用于测试，正常使用不应该设置helper
+    public static void setHelper(BeanContextHelper helper) {
+        BeanContext.helper = helper;
+    }
+
+    //为方便测试，把对一些静态方法的依赖封装到help类
+    private static BeanContextHelper helper = new BeanContextHelper();
     /**
      * All beans defined here
      */
@@ -68,7 +84,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
 
     @Override
     public List<BeanDefinition> export() {
-        return beanDefinitions.values().stream().filter(BeanDefinition::isExported).map(bd -> (BeanDefinition) bd).toList();
+        return beanDefinitions.values().stream().filter(BeanDefinition::isExported).toList();
     }
 
     @Override
@@ -77,29 +93,33 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     public List<BeanDefinition> getBeanDefinitions() {
-        return beanDefinitions.values().stream().map(bd -> (BeanDefinition) bd).toList();
+        return beanDefinitions.values().stream().toList();
     }
 
     public BeanContext(Class<?> configClass, BeanContext parent, String initPropertiesFile) {
+        yamlContextInitExecutor = new DelayedTaskExecutor(() -> readyToInitYamlContext);
         this.parent = parent;
+        if (configClass != null) {
+            Configuration configuration = configClass.getAnnotation(Configuration.class);
+            if (configuration != null && !configuration.name().equals("")) {
+                name = configuration.name();
+            }
+        }
+        this.environment = new PropertiesContext(this);
+        this.configBeanFactory = new YamlContext(this);
         if (!Strings.isNullOrEmpty(initPropertiesFile)) {
-            addPropertiesContext(initPropertiesFile);
-        }
-        if (configClass == null) {
-            return;
-        }
-        Configuration configuration = configClass.getAnnotation(Configuration.class);
-
-        if (configuration != null && !configuration.name().equals("")) {
-            name = configuration.name();
+            processConfigFile(initPropertiesFile);
         }
 
-        // Add bean defined within the config class
-        buildBeanDefinitionsFromConfigClass(configClass, configClass.getName() + "[" + name + "]");
+        if (configClass != null) {
+            // Add bean defined within the config class
+            buildBeanDefinitionsFromConfigClass(configClass, configClass.getName() + "[" + name + "]");
 
-        //Add special bean context self.
-        addBean(this, "Special bean");
-        ApplicationManager.getInstance().addContext(this);
+            //Add special bean context self.
+            addBean(this, "Special bean");
+            ApplicationManager.getInstance().addContext(this);
+        }
+        this.environment.initialize();
     }
 
     private Map<String, ConcurrentMap<BeanDefinition, Object>> getScopedContainer() {
@@ -118,23 +138,30 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
      */
     @Override
     public <T> T getBean(String name) {
-      return (T) getBean(name, Object.class);
+        return (T) getBean(name, Object.class);
     }
 
     @Override
-    public <T> T getBean(String name, Class<T> beanClass) {
-        Object bean = getBeanInThisContext(name);
+    public <T> T getBean(String name, Type beanType) {
+        T bean = (T) getBeanInThisContext(name);
         if (bean != null) {
-            return (T) bean;
+            return bean;
         }
-        for (Context context : attachedContexts) {
-            bean = context.getBean(name, beanClass);
-            if (bean != null) {
-                return (T) bean;
-            }
+        if (configBeanFactory != null) {
+            bean = configBeanFactory.getBean(name, beanType);
+        }
+        if (bean != null) {
+            return bean;
+        }
+
+        if (environment != null) {
+            bean = environment.getBean(name, beanType);
+        }
+        if (bean != null) {
+            return bean;
         }
         if (parent != null) {
-            return parent.getBean(name, beanClass);
+            return parent.getBean(name, beanType);
         }
         return null;
     }
@@ -226,6 +253,10 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         if (initialized) {
             return;
         }
+        environment.build();
+        readyToInitYamlContext = true;
+        yamlContextInitExecutor.execute();
+        configBeanFactory.build();
         beanDefinitions.values().forEach(bd -> {
             bd.initialize();
         });
@@ -243,8 +274,29 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         }).collect(Collectors.toList());
     }
 
-    private void addPropertiesContext(String propertiesFile) {
-        attachedContexts.add(new PropertiesContext(propertiesFile, this));
+    private void processConfigFile(String fileURL) {
+        if (fileURL.toLowerCase().endsWith(".properties")) {
+            environment.addProperties(fileURL, helper.propertiesFrom(fileURL));
+        }
+        if (fileURL.toLowerCase().endsWith(".yml")) {
+            JsonParser parser = helper.buildParser(fileURL);
+            BeanUtils.iterateYamlDocs(parser, jsonNode -> {
+                environment.addProperties(fileURL, BeanUtils.jsonTreeToProperties(jsonNode));
+            });
+            BeanUtils.closeParser(parser);
+            JsonParser yamlParser = BeanUtils.buildExpressionSupportedParser(helper.buildParser(fileURL), value -> {
+                return BeanUtils.expression(value, (key, defaultVal) -> {
+                            String val = getBean(key);
+                            return val != null ? val : defaultVal == null ? key : defaultVal;
+                        });
+            });
+            yamlContextInitExecutor.addFirst(() -> {
+                BeanUtils.iterateYamlDocs(yamlParser, jsonNode -> {
+                    configBeanFactory.addYamlDoc(fileURL, jsonNode);
+                });
+            });
+            yamlContextInitExecutor.addFirst(() -> BeanUtils.closeParser(yamlParser));
+        }
     }
 
     private void addBeanDefinition(BeanDefinition bd) {
@@ -275,15 +327,16 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
             if (scope != null) {
                 scopeValue = scope.value();
             }
-            return new GeneralBeanDefinition(this, configClass.getName() + "." + m.getName() + "()", name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m), () -> {
+            return new GeneralBeanDefinition(this, configClass.getName() + "." + m.getName() + "()",
+                    name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m), () -> {
                 return BeanUtils.invoke(m, getBean(configDefinition.getName()), this.getBeans(m.getParameterTypes()));
             });
         }).collect(Collectors.toList()));
         Configuration configuration = configClass.getAnnotation(Configuration.class);
         if (configuration != null) {
             //处理注入的属性文件
-            Arrays.stream(configuration.properties()).filter(uri -> !Strings.isNullOrEmpty(uri)).forEach(uri -> {
-                addPropertiesContext(uri);
+            Arrays.stream(configuration.files()).filter(uri -> !Strings.isNullOrEmpty(uri)).forEach(uri -> {
+                processConfigFile(uri);
             });
 
 
@@ -309,4 +362,12 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         return bd;
     }
 
+}
+class BeanContextHelper {
+    JsonParser buildParser(String fileURL) {
+        return BeanUtils.buildParser(fileURL);
+    }
+    Map<String, String> propertiesFrom(String fileURL) {
+        return FileUtils.propertiesFrom(fileURL);
+    }
 }

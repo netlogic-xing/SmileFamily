@@ -1,0 +1,15 @@
+family:
+  ${he}:
+    name: ${he.name}
+    age: 42
+  ${her}:
+    name: wonderwoman
+    age: 41
+  children:
+    - name: littleprincess
+      age: 6
+    - name: iceprincess
+      age: 15
+bean:
+  url:  http://localhost
+  port: 20

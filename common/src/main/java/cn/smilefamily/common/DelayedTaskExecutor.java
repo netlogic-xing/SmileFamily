@@ -60,6 +60,9 @@ public class DelayedTaskExecutor {
         return queue.isEmpty();
     }
 
+    /**
+     * 从队列尾部开始执行整个队列
+     */
     public void execute() {
         Task task = null;
         while ((task = queue.pollLast()) != null) {
