@@ -6,6 +6,7 @@ import cn.smilefamily.annotation.Injected;
 import cn.smilefamily.annotation.Value;
 import cn.smilefamily.bean.Dependency;
 import cn.smilefamily.bean.ValueExtractors;
+import cn.smilefamily.context.IllegalFileURLFormatException;
 import cn.smilefamily.context.SimpleExpressionSyntaxException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -55,6 +56,13 @@ public class BeanUtils {
         return name;
     }
 
+    public static String getActiveProfilePath(String fileURL, String activeProfile) {
+        int pos = fileURL.lastIndexOf('.');
+        if (pos == -1) {
+            throw new IllegalFileURLFormatException("File URL must has extension name. " + fileURL);
+        }
+        return fileURL.substring(0, pos) + "-" + activeProfile + fileURL.substring(pos);
+    }
 
     public static void traverse(JsonNode root, Deque<String> prefixes, BiConsumer<String, String> consumer) {
         if (root.isObject()) {
@@ -93,12 +101,14 @@ public class BeanUtils {
         }
     }
 
-    public static JsonParser buildParser(String filename) {
-        try {
-            return mapper.createParser(FileUtils.getInputStream(filename));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public static Optional<JsonParser> buildParser(String filename) {
+        return FileUtils.getInputStream(filename).map(in -> {
+            try {
+                return mapper.createParser(in);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public static <T> T toObject(JsonNode jsonNode, Type beanType) {

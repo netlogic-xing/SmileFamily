@@ -47,11 +47,11 @@ public class DelayedTaskExecutor {
         }
         queue.addLast(new Task(taskName, task));
     }
-
+    //加入队头，意味着先执行
     public void addFirst(Runnable task) {
         queue.addFirst(new Task(task));
     }
-
+    //加入队尾，意味着后执行
     public void addLast(Runnable task) {
         queue.addLast(new Task(task));
     }

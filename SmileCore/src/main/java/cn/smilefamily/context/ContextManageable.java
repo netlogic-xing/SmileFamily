@@ -7,6 +7,8 @@ import java.util.List;
 public interface ContextManageable {
     String getName();
 
+    String getProfile();
+
     void setParent(BeanContext parent);
 
     List<BeanDefinition> export();

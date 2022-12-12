@@ -1,6 +1,7 @@
 package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
+import cn.smilefamily.annotation.Profile;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.PropertyBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
@@ -17,6 +18,9 @@ class PropertiesContext implements Context {
     private record PropertySource(String source, Map<String, String> properties) {
     }
 
+    /**
+     * 多个配置源，后面的优先级高于前面的
+     */
     private List<PropertySource> propertySources = new ArrayList<>();
     private Context host;
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
@@ -58,6 +62,8 @@ class PropertiesContext implements Context {
                 });
             });
         });
+        //后加入的配置源优先级高，在查找时应该先找到
+        Collections.reverse(propertySources);
     }
 
     /**
@@ -94,6 +100,18 @@ class PropertiesContext implements Context {
     @Override
     public String getName() {
         return host.getName();
+    }
+
+    /**
+     * Find active profile from:
+     * 1. Java Systems
+     * 2. PropertiesContext(self)
+     * 3. default value
+     * @return
+     */
+    @Override
+    public String getProfile() {
+        return System.getProperty(Profile.ACTIVE_PROFILE_KEY, getBean(Profile.ACTIVE_PROFILE_KEY, Profile.DEFAULT_PROFILE));
     }
 
     @Override

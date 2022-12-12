@@ -1,5 +1,6 @@
 package cn.smilefamily.context
 
+import cn.smilefamily.annotation.Profile
 import cn.smilefamily.context.test.AppTestConfig
 import cn.smilefamily.context.test.BeanA
 import cn.smilefamily.context.test.BeanB
@@ -28,7 +29,7 @@ class BeanContextTest extends Specification {
     def "GetBean[only initProperties]"() {
         def dummyProperties = [nameplate: "hostauto"]
         BeanContextHelper helper = Spy(new BeanContextHelper(), {
-            propertiesFrom(_) >> dummyProperties
+            propertiesFrom(_) >> Optional.of(dummyProperties)
         })
         BeanContext.setHelper(helper)
         BeanContext context = new BeanContext("classpath:dummy.properties");
@@ -58,7 +59,7 @@ family:
 """
         BeanContextHelper helper = Spy(new BeanContextHelper(), {
             buildParser(_) >> {
-                mapper.createParser(yml)
+                Optional.of(mapper.createParser(yml))
             }
         })
         BeanContext.setHelper(helper)
@@ -72,6 +73,7 @@ family:
         context.getBean("family.children[0].name") == "littleprincess"
         context.getBean("not-exist") == null
     }
+
     def "GetBean[only init yml with placeholder]"() {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
         String yml = '''
@@ -93,7 +95,7 @@ he.name: superman
 '''
         BeanContextHelper helper = Spy(new BeanContextHelper(), {
             buildParser(_) >> {
-                mapper.createParser(yml)
+                Optional.of(mapper.createParser(yml))
             }
         })
         BeanContext.setHelper(helper)
@@ -108,21 +110,24 @@ he.name: superman
         context.getBean("family.children[0].name") == "littleprincess"
         context.getBean("not-exist") == null
     }
-    def "GetBean[normal]"() {
-        BeanContext context = new BeanContext(AppTestConfig.class);
 
+    def "GetBean[normal]"() {
+        System.setProperty(Profile.ACTIVE_PROFILE_KEY, "dev")
+        BeanContext context = new BeanContext(AppTestConfig.class)
+        expect:
+        context.getProfile() == "dev"
         when:
         context.build()
         then:
-        context.getBean("/family/dad/name") == "superman"
+        context.getBean("/family/dad/name") == "ironman"
         context.getBean('family.${he}.name') == '${he.name}'
-        context.getBean("family.dad.name") == "superman"
+        context.getBean("family.dad.name") == "ironman"
         context.getBean("family.children[0].name") == "littleprincess"
         context.getBean('he') == "dad"
         context.getBean("not-exist") == null
         context.getBean(Driver.class) == null
         context.getBean(BeanA.class) != null
-        BeanB b= context.getBean(BeanB.class)
+        BeanB b = context.getBean(BeanB.class)
         b.family.children[0].name == 'littleprincess'
 
     }

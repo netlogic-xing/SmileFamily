@@ -36,7 +36,8 @@ Smile家族包括:
 - [ ] Bean别名的支持
 - [ ] Schedule的支持
 - [ ] 拦截器/装饰器的支持
-- [ ] yml/json配置支持
+- [x] yml/json配置支持
+- [ ] profile的支持 
 - [ ] 重新抽象接口，稳定接口
 - [ ] 文档
     - [ ] 推广PPT

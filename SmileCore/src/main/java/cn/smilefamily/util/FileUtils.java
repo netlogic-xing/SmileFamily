@@ -6,10 +6,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
 public class FileUtils {
-    public static InputStream getInputStream(String fileURL) {
+    public static Optional<InputStream> getInputStream(String fileURL) {
         try {
             if (fileURL.startsWith("classpath:")) {
                 String path = fileURL.substring("classpath:".length());
@@ -17,14 +18,10 @@ public class FileUtils {
                 if (classLoader == null) {
                     classLoader = FileUtils.class.getClassLoader();
                 }
-                InputStream input = classLoader.getResourceAsStream(path);
-                if (input == null) {
-                    throw new RuntimeException("cannot find the source: " + fileURL);
-                }
-                return input;
+                return Optional.ofNullable(classLoader.getResourceAsStream(path));
             } else if (fileURL.startsWith("file:")) {
                 String path = fileURL.substring("file:".length());
-                return new FileInputStream(path);
+                return Optional.ofNullable(new FileInputStream(path));
             }
             throw new UnsupportedOperationException("Unsupported protocol: " + fileURL);
         } catch (IOException e) {
@@ -37,13 +34,16 @@ public class FileUtils {
         //getInputStream("classpath:test1.yml");
         getInputStream("classpath:cn/smilefamily/context/test1.yml");
     }
-    public static Map<String, String> propertiesFrom(String fileURL) {
+
+    public static Optional<Map<String, String>> propertiesFrom(String fileURL) {
         Properties properties = new Properties();
-        try {
-            properties.load(getInputStream(fileURL));
-            return Maps.fromProperties(properties);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return getInputStream(fileURL).map(inputStream -> {
+            try {
+                properties.load(inputStream);
+                return Maps.fromProperties(properties);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

@@ -32,8 +32,8 @@ public interface BeanFactory {
         return targetBeans.toArray();
     }
 
-    public default Object getBean(String name, Object defaultValue) {
-        Object bean = getBean(name);
+    public default<T> T getBean(String name, T defaultValue) {
+        T bean = getBean(name);
         return bean == null ? defaultValue : bean;
     }
 }

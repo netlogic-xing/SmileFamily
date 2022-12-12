@@ -62,6 +62,11 @@ class YamlContext implements Context {
     }
 
     @Override
+    public String getProfile() {
+        throw new UnsupportedOperationException("YamlContext doesn't support getProfile");
+    }
+
+    @Override
     public void setParent(BeanContext parent) {
         this.host = parent;
     }

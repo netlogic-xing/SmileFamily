@@ -8,6 +8,7 @@ import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
 import cn.smilefamily.util.FileUtils;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Strings;
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
@@ -42,6 +43,8 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     private DelayedTaskExecutor yamlContextInitExecutor;
 
     private boolean readyToInitYamlContext;
+    private String profile;
+
     //此方法仅仅用于测试，正常使用不应该设置helper
     public static void setHelper(BeanContextHelper helper) {
         BeanContext.helper = helper;
@@ -75,6 +78,28 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     @Override
     public String getName() {
         return name;
+    }
+
+    /**
+     * 正常情况下，应该从parent获取，才能保证本context能被正常初始化
+     * Find active profile from:
+     * 1. parent
+     * 2. self environment
+     *
+     * @return
+     */
+    @Override
+    public String getProfile() {
+        if (profile != null) {
+            return profile;
+        }
+        if (parent != null) {
+            profile = parent.getProfile();
+        }
+        if (profile == null) {
+            profile = environment.getProfile();
+        }
+        return profile;
     }
 
     @Override
@@ -264,39 +289,67 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     private List<BeanDefinition> buildBeanDefinitionsFromPackage(String packageName, String source) {
-        return BeanUtils.findAllAnnotatedClassIn(packageName, Bean.class).stream().map(c -> {
-            String name = c.getName();
-            Bean bean = c.getAnnotation(Bean.class);
-            if (bean != null && !bean.name().equals("")) {
-                name = bean.name();
-            }
-            return new GeneralBeanDefinition(this, source, name, c);
-        }).collect(Collectors.toList());
+        return BeanUtils.findAllAnnotatedClassIn(packageName, Bean.class).stream()
+                .filter(c -> !c.isAnnotationPresent(Profile.class) || c.getAnnotation(Profile.class).value().equals(getProfile()))
+                .map(c -> {
+                    String name = c.getName();
+                    Bean bean = c.getAnnotation(Bean.class);
+                    if (bean != null && !bean.name().equals("")) {
+                        name = bean.name();
+                    }
+                    return new GeneralBeanDefinition(this, source, name, c);
+                }).collect(Collectors.toList());
     }
 
     private void processConfigFile(String fileURL) {
         if (fileURL.toLowerCase().endsWith(".properties")) {
-            environment.addProperties(fileURL, helper.propertiesFrom(fileURL));
+            //先处理正常配置
+            processProperties(fileURL);
+            //后处理activeProfile保证activeProfile中的配置优先
+            String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
+            processProperties(activeProfilePath);
         }
         if (fileURL.toLowerCase().endsWith(".yml")) {
-            JsonParser parser = helper.buildParser(fileURL);
-            BeanUtils.iterateYamlDocs(parser, jsonNode -> {
-                environment.addProperties(fileURL, BeanUtils.jsonTreeToProperties(jsonNode));
-            });
-            BeanUtils.closeParser(parser);
-            JsonParser yamlParser = BeanUtils.buildExpressionSupportedParser(helper.buildParser(fileURL), value -> {
-                return BeanUtils.expression(value, (key, defaultVal) -> {
-                            String val = getBean(key);
-                            return val != null ? val : defaultVal == null ? key : defaultVal;
-                        });
-            });
-            yamlContextInitExecutor.addFirst(() -> {
-                BeanUtils.iterateYamlDocs(yamlParser, jsonNode -> {
-                    configBeanFactory.addYamlDoc(fileURL, jsonNode);
-                });
-            });
-            yamlContextInitExecutor.addFirst(() -> BeanUtils.closeParser(yamlParser));
+            processYaml(fileURL);
+            String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
+            processYaml(activeProfilePath);
         }
+    }
+
+    private void processYaml(String fileURL) {
+        Optional<JsonParser> parser = helper.buildParser(fileURL);
+        if (parser.isEmpty()) {
+            return;
+        }
+        BeanUtils.iterateYamlDocs(parser.get(), jsonNode -> {
+            Map<String, String> props = BeanUtils.jsonTreeToProperties(jsonNode);
+            String profile = props.get(Profile.PROFILE_KEY);
+            if (profile == null || profile.equals(getProfile())) {
+                environment.addProperties(fileURL, props);
+            }
+        });
+        BeanUtils.closeParser(parser.get());
+        JsonParser yamlParser = BeanUtils.buildExpressionSupportedParser(helper.buildParser(fileURL).get(), value -> {
+            return BeanUtils.expression(value, (key, defaultVal) -> {
+                String val = getBean(key);
+                return val != null ? val : defaultVal == null ? key : defaultVal;
+            });
+        });
+        yamlContextInitExecutor.addFirst(() -> {
+            BeanUtils.iterateYamlDocs(yamlParser, jsonNode -> {
+                JsonNode profileNode = jsonNode.at(Profile.PROFILE_KEY_PATH);
+                if (profileNode.isMissingNode() || profileNode.asText().equals(getProfile())) {
+                    configBeanFactory.addYamlDoc(fileURL, jsonNode);
+                }
+            });
+        });
+        yamlContextInitExecutor.addFirst(() -> BeanUtils.closeParser(yamlParser));
+    }
+
+    private void processProperties(String fileURL) {
+        helper.propertiesFrom(fileURL).ifPresent(props -> {
+            environment.addProperties(fileURL, props);
+        });
     }
 
     private void addBeanDefinition(BeanDefinition bd) {
@@ -313,25 +366,28 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     private void buildBeanDefinitionsFromConfigClass(Class<?> configClass, String source) {
+        if (configClass.isAnnotationPresent(Profile.class) && !configClass.getAnnotation(Profile.class).equals(getProfile())) {
+            return;
+        }
         GeneralBeanDefinition configDefinition = GeneralBeanDefinition.create(this, source, configClass);
         addBeanDefinition(configDefinition);
-        addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> {
-            return m.isAnnotationPresent(Bean.class);
-        }).map(m -> {
-            String name = m.getAnnotation(Bean.class).name();
-            if (name == null || name.equals("")) {
-                name = m.getReturnType().getName();
-            }
-            Scope scope = m.getAnnotation(Scope.class);
-            String scopeValue = null;
-            if (scope != null) {
-                scopeValue = scope.value();
-            }
-            return new GeneralBeanDefinition(this, configClass.getName() + "." + m.getName() + "()",
-                    name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m), () -> {
-                return BeanUtils.invoke(m, getBean(configDefinition.getName()), this.getBeans(m.getParameterTypes()));
-            });
-        }).collect(Collectors.toList()));
+        addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> m.isAnnotationPresent(Bean.class))
+                .filter(m -> !m.isAnnotationPresent(Profile.class) || m.getAnnotation(Profile.class).value().equals(getProfile()))
+                .map(m -> {
+                    String name = m.getAnnotation(Bean.class).name();
+                    if (name == null || name.equals("")) {
+                        name = m.getReturnType().getName();
+                    }
+                    Scope scope = m.getAnnotation(Scope.class);
+                    String scopeValue = null;
+                    if (scope != null) {
+                        scopeValue = scope.value();
+                    }
+                    return new GeneralBeanDefinition(this, configClass.getName() + "." + m.getName() + "()",
+                            name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m), () -> {
+                        return BeanUtils.invoke(m, getBean(configDefinition.getName()), this.getBeans(m.getParameterTypes()));
+                    });
+                }).collect(Collectors.toList()));
         Configuration configuration = configClass.getAnnotation(Configuration.class);
         if (configuration != null) {
             //处理注入的属性文件
@@ -363,11 +419,13 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
 }
+
 class BeanContextHelper {
-    JsonParser buildParser(String fileURL) {
+    Optional<JsonParser> buildParser(String fileURL) {
         return BeanUtils.buildParser(fileURL);
     }
-    Map<String, String> propertiesFrom(String fileURL) {
+
+    Optional<Map<String, String>> propertiesFrom(String fileURL) {
         return FileUtils.propertiesFrom(fileURL);
     }
 }
