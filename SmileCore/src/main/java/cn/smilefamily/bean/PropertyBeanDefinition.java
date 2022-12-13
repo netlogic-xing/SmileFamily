@@ -1,9 +1,12 @@
 package cn.smilefamily.bean;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class PropertyBeanDefinition implements BeanDefinition {
     private String name;
+
     private String value;
     private boolean exported;
     private String description;
@@ -35,6 +38,7 @@ public class PropertyBeanDefinition implements BeanDefinition {
     public String getName() {
         return name;
     }
+
 
     @Override
     public Class<?> getType() {

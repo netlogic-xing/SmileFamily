@@ -1,21 +1,26 @@
 package cn.smilefamily.bean;
 
+import java.util.Collections;
+import java.util.List;
+
 public interface BeanDefinition {
     String getSource();
 
-    default String getDescription(){
+    default String getDescription() {
         return null;
     }
-    default boolean isSingleton(){
+
+    default boolean isSingleton() {
         return true;
     }
-     Class<?> getType();
 
-    default boolean isPrototype(){
+    Class<?> getType();
+
+    default boolean isPrototype() {
         return false;
     }
 
-    default boolean isCustomizedScope(){
+    default boolean isCustomizedScope() {
         return false;
     }
 
@@ -23,7 +28,15 @@ public interface BeanDefinition {
 
     String getName();
 
-    default void initialize(){
+    /**
+     * 支持别名
+     * @return
+     */
+    default List<String> getAliases() {
+        return Collections.singletonList(getName());
+    }
+
+    default void initialize() {
 
     }
 

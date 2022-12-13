@@ -1,11 +1,7 @@
 package cn.smilefamily.context
 
 import cn.smilefamily.annotation.Profile
-import cn.smilefamily.context.test.AppTestConfig
-import cn.smilefamily.context.test.BeanA
-import cn.smilefamily.context.test.BeanB
-import cn.smilefamily.context.test.BeanD
-import cn.smilefamily.context.test.Person
+import cn.smilefamily.context.test.*
 import cn.smilefamily.iocexample.external.Driver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -130,10 +126,18 @@ he.name: superman
         context.getBean(Driver.class) == null
         context.getBean(BeanA.class) != null
         BeanB b = context.getBean(BeanB.class)
+        BeanB aliasB = context.getBean("beanb", BeanB.class)
+        b == aliasB
         b.family.children[0].name == 'littleprincess'
         context.getBean(BeanD.class) == null
         Person thePerson = context.getBean("thePerson", Person.class)
-        thePerson != null;
+        Person superman = context.getBean("superman", Person.class)
+        Person ironman = context.getBean("ironman", Person.class)
+        thePerson != null
+        superman != null
+        ironman != null
+        thePerson == superman
+        superman == ironman
     }
 
     def "TestGetBean"() {

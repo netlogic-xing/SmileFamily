@@ -31,6 +31,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private BeanFactory beanFactory;
     //Bean名称（在context中的key）
     private String name;
+    private List<String> aliases = new ArrayList<>();
     //Bean对应类型
     private Class<?> type;
     //bean定义来源，来自按个config类，那个配置文件。
@@ -66,9 +67,10 @@ public class GeneralBeanDefinition implements BeanDefinition {
     //标记此BeanDefinition是否执行了@PostConstruct方法，bean已经功能完备，可对外提供服务
     private boolean beanInitialized;
 
-    public GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz) {
+    private GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz) {
         this.beanFactory = beanFactory;
         this.name = name;
+        this.aliases.add(name);
         this.type = clazz;
         this.source = source;
         Export export = type.getAnnotation(Export.class);
@@ -82,7 +84,15 @@ public class GeneralBeanDefinition implements BeanDefinition {
         } else {
             this.scope = s.value();
         }
+        Alias[] names = type.getAnnotationsByType(Alias.class);
+        this.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
         collectDependencies();
+    }
+
+
+    @Override
+    public List<String> getAliases() {
+        return aliases;
     }
 
     /**
@@ -93,8 +103,8 @@ public class GeneralBeanDefinition implements BeanDefinition {
      * @param deps    生成Bean的方法参数，假定全部都能在Context中找到
      * @param factory 闭包，包裹生成Bean的方法及参数
      */
-    public GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
-                                 List<Dependency> deps, Supplier<?> factory) {
+    private GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
+                                  List<Dependency> deps, Supplier<?> factory) {
         this(beanFactory, source, name, clazz);
         this.exported = export != null;
         if (this.exported) {
@@ -118,8 +128,45 @@ public class GeneralBeanDefinition implements BeanDefinition {
                 "\tfrom: " + source;
     }
 
-    public static GeneralBeanDefinition create(BeanFactory beanFactory, String source, Class<?> clazz) {
-        return new GeneralBeanDefinition(beanFactory, source, clazz.getName(), clazz);
+    public static GeneralBeanDefinition create(BeanFactory beanFactory, Class<?> clazz) {
+        return new GeneralBeanDefinition(beanFactory, null, clazz.getName(), clazz);
+    }
+
+    public static GeneralBeanDefinition create(BeanFactory beanFactory, String name, Class<?> clazz, Supplier<Object> factory, String source) {
+        return new GeneralBeanDefinition(beanFactory, source, name, clazz, null, clazz.getAnnotation(Export.class), Collections.emptyList(), factory);
+    }
+
+    public static GeneralBeanDefinition create(BeanFactory beanFactory, Object bean) {
+        return new GeneralBeanDefinition(beanFactory, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+    }
+
+    public static GeneralBeanDefinition create(BeanFactory beanFactory, String source, Class<?> c) {
+        String name = c.getName();
+        Bean bean = c.getAnnotation(Bean.class);
+        if (bean != null && !bean.name().equals("")) {
+            name = bean.name();
+        }
+        return new GeneralBeanDefinition(beanFactory, source, name, c);
+    }
+
+    public static GeneralBeanDefinition createByMethod(BeanFactory beanFactory, GeneralBeanDefinition configDefinition, Method m) {
+        String name = m.getAnnotation(Bean.class).name();
+        if (name == null || name.equals("")) {
+            name = m.getReturnType().getName();
+        }
+
+        Scope scope = m.getAnnotation(Scope.class);
+        String scopeValue = null;
+        if (scope != null) {
+            scopeValue = scope.value();
+        }
+
+        GeneralBeanDefinition definition = new GeneralBeanDefinition(beanFactory, m.getDeclaringClass().getName() + "." + m.getName() + "()",
+                name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
+                () -> BeanUtils.invoke(m, beanFactory.getBean(configDefinition.getName()), beanFactory.getBeans(m.getParameterTypes())));
+        Alias[] names = m.getAnnotationsByType(Alias.class);
+        definition.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
+        return definition;
     }
 
     @Override

@@ -1,11 +1,9 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Factory;
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.*;
 
 @Bean
+@Alias("beanb")
 public class BeanB {
     @Injected
     private BeanA beanA;

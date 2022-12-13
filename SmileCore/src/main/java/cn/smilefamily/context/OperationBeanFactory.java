@@ -62,13 +62,13 @@ public interface OperationBeanFactory extends BeanFactory{
     }
 
     public default Object inject(Object bean) {
-        BeanDefinition bd = new GeneralBeanDefinition(this, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+        BeanDefinition bd = GeneralBeanDefinition.create(this, bean);
         bd.initialize();
         return bd.getBeanInstance();
     }
 
     public default Object create(Class<?> clazz) {
-        BeanDefinition bd = new GeneralBeanDefinition(this, null, clazz.getName(), clazz);
+        BeanDefinition bd = GeneralBeanDefinition.create(this, clazz);
         bd.initialize();
         return bd.getBeanInstance();
     }
