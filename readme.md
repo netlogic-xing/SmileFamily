@@ -37,7 +37,7 @@ Smile家族包括:
 - [ ] Schedule的支持
 - [ ] 拦截器/装饰器的支持
 - [x] yml/json配置支持
-- [ ] profile的支持 
+- [x] profile的支持 
 - [ ] 重新抽象接口，稳定接口
 - [ ] 文档
     - [ ] 推广PPT
