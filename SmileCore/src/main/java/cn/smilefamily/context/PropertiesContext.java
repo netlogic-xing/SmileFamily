@@ -111,7 +111,7 @@ class PropertiesContext implements Context {
      */
     @Override
     public String getProfile() {
-        return System.getProperty(Profile.ACTIVE_PROFILE_KEY, getBean(Profile.ACTIVE_PROFILE_KEY, Profile.DEFAULT_PROFILE));
+        return System.getProperty(Profile.ACTIVE_KEY, (String) getBean(Profile.ACTIVE_KEY));
     }
 
     @Override

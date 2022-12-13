@@ -8,11 +8,13 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Profile {
-    String PROFILE_KEY = "smile.profile";
+    String KEY = "smile.profile";
     //由于从jsonNode查询
-    String PROFILE_KEY_PATH = "/smile/profile";
-    String ACTIVE_PROFILE_KEY = "smile.profile.active";
-    String DEFAULT_PROFILE = "default";
+    String KEY_PATH = "/smile/profile";
+    String ACTIVE_KEY = "smile.profile.active";
+    String TEST = "test";
+    String DEV = "dev";
+    String PROD = "prod";
 
-    String value() default DEFAULT_PROFILE;
+    String value();
 }

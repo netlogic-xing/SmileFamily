@@ -302,17 +302,26 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     private void processConfigFile(String fileURL) {
-        if (fileURL.toLowerCase().endsWith(".properties")) {
-            //先处理正常配置
-            processProperties(fileURL);
-            //后处理activeProfile保证activeProfile中的配置优先
-            String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
-            processProperties(activeProfilePath);
-        }
-        if (fileURL.toLowerCase().endsWith(".yml")) {
-            processYaml(fileURL);
-            String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
-            processYaml(activeProfilePath);
+        switch (FileUtils.extensionName(fileURL.toLowerCase())) {
+            case ".properties" -> {
+                //先处理正常配置
+                processProperties(fileURL);
+                //后处理activeProfile保证activeProfile中的配置优先
+                if (getProfile() == null) {
+                    return;
+                }
+                String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
+                processProperties(activeProfilePath);
+            }
+            case ".yml" -> {
+                processYaml(fileURL);
+                if (getProfile() == null) {
+                    return;
+                }
+                String activeProfilePath = BeanUtils.getActiveProfilePath(fileURL, getProfile());
+                processYaml(activeProfilePath);
+            }
+            default -> throw new BeanInitializationException("Unsupported config file :" + fileURL);
         }
     }
 
@@ -323,7 +332,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         }
         BeanUtils.iterateYamlDocs(parser.get(), jsonNode -> {
             Map<String, String> props = BeanUtils.jsonTreeToProperties(jsonNode);
-            String profile = props.get(Profile.PROFILE_KEY);
+            String profile = props.get(Profile.KEY);
             if (profile == null || profile.equals(getProfile())) {
                 environment.addProperties(fileURL, props);
             }
@@ -337,7 +346,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         });
         yamlContextInitExecutor.addFirst(() -> {
             BeanUtils.iterateYamlDocs(yamlParser, jsonNode -> {
-                JsonNode profileNode = jsonNode.at(Profile.PROFILE_KEY_PATH);
+                JsonNode profileNode = jsonNode.at(Profile.KEY_PATH);
                 if (profileNode.isMissingNode() || profileNode.asText().equals(getProfile())) {
                     configBeanFactory.addYamlDoc(fileURL, jsonNode);
                 }
@@ -366,7 +375,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     private void buildBeanDefinitionsFromConfigClass(Class<?> configClass, String source) {
-        if (configClass.isAnnotationPresent(Profile.class) && !configClass.getAnnotation(Profile.class).equals(getProfile())) {
+        if (configClass.isAnnotationPresent(Profile.class) && !configClass.getAnnotation(Profile.class).value().equals(getProfile())) {
             return;
         }
         GeneralBeanDefinition configDefinition = GeneralBeanDefinition.create(this, source, configClass);

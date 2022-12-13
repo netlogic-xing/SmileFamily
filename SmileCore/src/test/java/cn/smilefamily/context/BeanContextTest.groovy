@@ -4,6 +4,8 @@ import cn.smilefamily.annotation.Profile
 import cn.smilefamily.context.test.AppTestConfig
 import cn.smilefamily.context.test.BeanA
 import cn.smilefamily.context.test.BeanB
+import cn.smilefamily.context.test.BeanD
+import cn.smilefamily.context.test.Person
 import cn.smilefamily.iocexample.external.Driver
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -112,7 +114,7 @@ he.name: superman
     }
 
     def "GetBean[normal]"() {
-        System.setProperty(Profile.ACTIVE_PROFILE_KEY, "dev")
+        System.setProperty(Profile.ACTIVE_KEY, "dev")
         BeanContext context = new BeanContext(AppTestConfig.class)
         expect:
         context.getProfile() == "dev"
@@ -129,7 +131,9 @@ he.name: superman
         context.getBean(BeanA.class) != null
         BeanB b = context.getBean(BeanB.class)
         b.family.children[0].name == 'littleprincess'
-
+        context.getBean(BeanD.class) == null
+        Person thePerson = context.getBean("thePerson", Person.class)
+        thePerson != null;
     }
 
     def "TestGetBean"() {

@@ -10,6 +10,13 @@ import java.util.Optional;
 import java.util.Properties;
 
 public class FileUtils {
+    public static String extensionName(String fileURL){
+        int pos = fileURL.lastIndexOf('.');
+        if(pos == -1){
+            return null;
+        }
+        return fileURL.substring(pos);
+    }
     public static Optional<InputStream> getInputStream(String fileURL) {
         try {
             if (fileURL.startsWith("classpath:")) {
