@@ -1,7 +1,7 @@
 package cn.smilefamily.iocexample.external;
 
-import cn.smilefamily.annotation.Context;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Context;
+import cn.smilefamily.annotation.core.Value;
 
 @Context
 public class AspectBean {

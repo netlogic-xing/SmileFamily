@@ -1,6 +1,10 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.*;
+import cn.smilefamily.annotation.Alias;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Factory;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Value;
 
 @Bean
 @Alias("beanb")

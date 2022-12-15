@@ -1,7 +1,7 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Profile;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Profile;
 
 @Bean
 @Profile(Profile.DEV)

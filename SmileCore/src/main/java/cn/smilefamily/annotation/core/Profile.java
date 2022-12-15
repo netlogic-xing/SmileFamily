@@ -1,4 +1,4 @@
-package cn.smilefamily.annotation;
+package cn.smilefamily.annotation.core;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

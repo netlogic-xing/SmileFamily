@@ -1,8 +1,8 @@
 package cn.smilefamily.iocexample.service;
 
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.PostConstruct;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.PostConstruct;
 import cn.smilefamily.iocexample.external.BeanByFactory;
 import cn.smilefamily.iocexample.external.DataSource;
 

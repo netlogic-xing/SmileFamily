@@ -1,24 +1,26 @@
 package cn.smilefamily.iocexample;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Configuration;
-import cn.smilefamily.annotation.Export;
-import cn.smilefamily.annotation.External;
+import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.iocexample.external.DataSource;
 import cn.smilefamily.iocexample.external.Driver;
 
-@Configuration(scanPackages = {"cn.smilefamily.iocexample.model","cn.smilefamily.iocexample.service","cn.smilefamily.iocexample.external"},
-        files = {"classpath:application.properties", "classpath:application.yml"})
+@Configuration()
+@ScanPackage("cn.smilefamily.iocexample.model")
+@ScanPackage("cn.smilefamily.iocexample.service")
+@ScanPackage("cn.smilefamily.iocexample.external")
+@PropertySource("classpath:application.properties")
+@PropertySource("classpath:application.yml")
+
 public class AppConfig {
 
     @Bean
     @Export("for test")
-    public Driver driver(){
+    public Driver driver() {
         return new Driver("dr1");
     }
 
     @Bean
-    public DataSource dataSource(@External("for test") Driver driver){
+    public DataSource dataSource(@External("for test") Driver driver) {
         DataSource ds = new DataSource("DS1");
         ds.setDriver(driver);
         return ds;

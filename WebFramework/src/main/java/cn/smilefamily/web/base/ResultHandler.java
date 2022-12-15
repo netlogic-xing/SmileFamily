@@ -1,5 +1,6 @@
 package cn.smilefamily.web.base;
 
+import cn.smilefamily.annotation.AnnotationExtractor;
 import com.google.common.base.Strings;
 import cn.smilefamily.web.annotation.Model;
 import cn.smilefamily.web.annotation.RequestMapping;
@@ -26,19 +27,19 @@ public class ResultHandler {
 
 
     public ResultHandler(Method method) {
-         this.encoding = method.getAnnotation(RequestMapping.class).encoding();
+         this.encoding = AnnotationExtractor.get(method).getAnnotation(RequestMapping.class).encoding();
         //返回类型为String且未以ResponseBody标注,表示返回的是view的路径,没有model
         if (String.class.isAssignableFrom(method.getReturnType())
-                && !method.isAnnotationPresent(ResponseBody.class)) {
+                && !AnnotationExtractor.get(method).isAnnotationPresent(ResponseBody.class)) {
             renderer = new TemplateViewRenderer();
             viewPath = true;
             return;
         }
         //返回类型为Map，并且以Model标注
-        if (method.isAnnotationPresent(Model.class)
+        if (AnnotationExtractor.get(method).isAnnotationPresent(Model.class)
                 && Map.class.isAssignableFrom(method.getReturnType())) {
             String path = method.getName();
-            Model model = method.getAnnotation(Model.class);
+            Model model = AnnotationExtractor.get(method).getAnnotation(Model.class);
             path = Strings.isNullOrEmpty(model.view()) ? path : model.view();
             renderer = new TemplateViewRenderer();
             this.fixedViewPath = path;
@@ -52,7 +53,7 @@ public class ResultHandler {
             return;
         }
 
-        ResponseBody responseBody = method.getAnnotation(ResponseBody.class);
+        ResponseBody responseBody = AnnotationExtractor.get(method).getAnnotation(ResponseBody.class);
         //基础类型和字符串默认为text/plain,除非显式指定为ResponseBody(contentType="application/json")
         if (method.getReturnType().isPrimitive() || String.class.isAssignableFrom(method.getReturnType())) {
             if (responseBody != null && responseBody.contentType().equals("text/plain")) {

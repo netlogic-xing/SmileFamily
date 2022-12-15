@@ -1,10 +1,11 @@
 package cn.smilefamily.bootexample;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Scope;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Scope;
+import cn.smilefamily.web.annotation.Session;
 
 @Bean
-@Scope("session")
+@Session
 public class SessionBean {
     private String name = System.currentTimeMillis()+"";
 

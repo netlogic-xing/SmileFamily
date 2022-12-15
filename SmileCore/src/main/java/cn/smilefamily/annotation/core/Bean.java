@@ -1,4 +1,4 @@
-package cn.smilefamily.annotation;
+package cn.smilefamily.annotation.core;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -12,5 +12,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Bean {
     //指定bean名称，如果不指定，默认使用类名
-    String name() default "";
+    String value() default "";
 }

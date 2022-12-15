@@ -1,5 +1,6 @@
 package cn.smilefamily.web.base;
 
+import cn.smilefamily.annotation.AnnotationExtractor;
 import cn.smilefamily.web.annotation.*;
 import com.google.common.base.Strings;
 
@@ -36,22 +37,22 @@ class ParameterValueHolder {
     public ParameterValueHolder(Parameter p) {
         this.type = p.getParameterizedType();
         this.name = p.getName();
-        if (p.isAnnotationPresent(PathVariable.class)) {
+        if (AnnotationExtractor.get(p).isAnnotationPresent(PathVariable.class)) {
             checkArgument(p.getType().isPrimitive() && p.getType() != Void.class,
                     "@PathVariable only supports primitive type. Unsupported type: " + p.getType());
             this.setPathVariable(true);
             this.setPrimitive(true);
-            String val = p.getAnnotation(PathVariable.class).value();
+            String val = AnnotationExtractor.get(p).getAnnotation(PathVariable.class).value();
             name = Strings.isNullOrEmpty(val) ? val : name;
             return;
         }
 
-        if (p.isAnnotationPresent(RequestHeader.class)) {
+        if (AnnotationExtractor.get(p).isAnnotationPresent(RequestHeader.class)) {
             checkArgument(p.getType().isPrimitive() && p.getType() != Void.class,
                     "@RequestHeader only supports primitive type. Unsupported type: " + p.getType());
             this.setRequestHeader(true);
             this.setPrimitive(true);
-            String val = p.getAnnotation(RequestHeader.class).value();
+            String val = AnnotationExtractor.get(p).getAnnotation(RequestHeader.class).value();
             name = Strings.isNullOrEmpty(val) ? val : name;
             return;
         }
@@ -65,7 +66,7 @@ class ParameterValueHolder {
             return;
         }
 
-        if (p.isAnnotationPresent(RequestBody.class)) {
+        if (AnnotationExtractor.get(p).isAnnotationPresent(RequestBody.class)) {
             checkArgument(!p.getType().isPrimitive() && !p.getType().isArray(),
                     "@RequestBody doesn't support array and primitives.");
             this.setRequestBody(true);
@@ -75,7 +76,7 @@ class ParameterValueHolder {
             this.setCollection(Collection.class.isAssignableFrom(p.getType()));
             return;
         }
-        if (p.isAnnotationPresent(BodyAttribute.class)) {
+        if (AnnotationExtractor.get(p).isAnnotationPresent(BodyAttribute.class)) {
             checkArgument(!p.getType().isArray(),
                     "@BodyAttribute doesn't support array.");
             this.setBodyAttribute(true);
@@ -84,7 +85,7 @@ class ParameterValueHolder {
             this.setSet(Set.class.isAssignableFrom(p.getType()));
             this.setMap(Map.class.isAssignableFrom(p.getType()));
             this.setCollection(Collection.class.isAssignableFrom(p.getType()));
-            String val = p.getAnnotation(BodyAttribute.class).value();
+            String val = AnnotationExtractor.get(p).getAnnotation(BodyAttribute.class).value();
             name = Strings.isNullOrEmpty(val) ? val : name;
             return;
         }
@@ -96,8 +97,8 @@ class ParameterValueHolder {
         this.setRequestParameter(true);
         this.setPrimitive(!p.getType().isArray());
         this.setArray(p.getType().isArray());
-        if (p.isAnnotationPresent(RequestParameter.class)) {
-            String val = p.getAnnotation(RequestParameter.class).value();
+        if (AnnotationExtractor.get(p).isAnnotationPresent(RequestParameter.class)) {
+            String val = AnnotationExtractor.get(p).getAnnotation(RequestParameter.class).value();
             name = Strings.isNullOrEmpty(val) ? val : name;
         }
     }

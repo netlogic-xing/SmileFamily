@@ -1,9 +1,7 @@
 package cn.smilefamily.bootexample;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Scope;
-
-import java.util.Random;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Scope;
 
 @Bean
 @Scope("prototype")

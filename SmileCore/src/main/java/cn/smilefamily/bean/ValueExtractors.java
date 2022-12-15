@@ -1,6 +1,6 @@
 package cn.smilefamily.bean;
 
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Value;
 import cn.smilefamily.util.BeanUtils;
 
 import java.lang.reflect.Type;

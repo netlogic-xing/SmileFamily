@@ -1,7 +1,7 @@
 package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.Profile;
+import cn.smilefamily.annotation.core.Profile;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.PropertyBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;

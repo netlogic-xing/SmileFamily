@@ -1,11 +1,14 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.*;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Export;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Value;
 
 @Bean
 @Export("This is a demo for export")
 public class BeanA {
-    @Injected(name="/family/dad/name")
+    @Injected("/family/dad/name")
     private String name;
    @Value("${bean.url}")
     private String url;

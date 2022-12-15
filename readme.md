@@ -32,8 +32,9 @@ Smile家族包括:
 - [ ] 模块化支持
     - [x] Bean的导入导出
     - [ ] 模块的封装形式
-- [ ] @AliasFor的支持
-- [ ] Bean别名的支持
+- [x] @AliasFor的支持
+- [x] Annotation"继承"的支持
+- [x] Bean别名的支持
 - [ ] Schedule的支持
 - [ ] 拦截器/装饰器的支持
 - [x] yml/json配置支持

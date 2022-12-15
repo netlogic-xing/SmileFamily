@@ -1,9 +1,9 @@
 package cn.smilefamily.iocexample.external;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Factory;
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Factory;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Value;
 @Bean
 public class D {
     private String name;

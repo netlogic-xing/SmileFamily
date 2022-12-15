@@ -1,8 +1,9 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.Profile;
+import cn.smilefamily.annotation.core.Profile;
+import cn.smilefamily.annotation.core.Bean;
 
-@cn.smilefamily.annotation.Bean
+@Bean
 @Profile(Profile.PROD)
 public class BeanD {
     private String name;

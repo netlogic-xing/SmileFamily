@@ -2,6 +2,7 @@ package cn.smilefamily.bean;
 
 import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.*;
+import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.context.BeanFactory;
 import cn.smilefamily.util.BeanUtils;
@@ -73,18 +74,18 @@ public class GeneralBeanDefinition implements BeanDefinition {
         this.aliases.add(name);
         this.type = clazz;
         this.source = source;
-        Export export = type.getAnnotation(Export.class);
+        Export export = AnnotationExtractor.get(type).getAnnotation(Export.class);
         exported = export != null;
         if (exported) {
             this.description = export.value();
         }
-        Scope s = type.getAnnotation(Scope.class);
+        Scope s = AnnotationExtractor.get(type).getAnnotation(Scope.class);
         if (s == null) {
             this.scope = Scope.Singleton;
         } else {
             this.scope = s.value();
         }
-        Alias[] names = type.getAnnotationsByType(Alias.class);
+        Alias[] names = AnnotationExtractor.get(type).getAnnotationsByType(Alias.class);
         this.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
         collectDependencies();
     }
@@ -133,7 +134,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     }
 
     public static GeneralBeanDefinition create(BeanFactory beanFactory, String name, Class<?> clazz, Supplier<Object> factory, String source) {
-        return new GeneralBeanDefinition(beanFactory, source, name, clazz, null, clazz.getAnnotation(Export.class), Collections.emptyList(), factory);
+        return new GeneralBeanDefinition(beanFactory, source, name, clazz, null, AnnotationExtractor.get(clazz).getAnnotation(Export.class), Collections.emptyList(), factory);
     }
 
     public static GeneralBeanDefinition create(BeanFactory beanFactory, Object bean) {
@@ -142,29 +143,29 @@ public class GeneralBeanDefinition implements BeanDefinition {
 
     public static GeneralBeanDefinition create(BeanFactory beanFactory, String source, Class<?> c) {
         String name = c.getName();
-        Bean bean = c.getAnnotation(Bean.class);
-        if (bean != null && !bean.name().equals("")) {
-            name = bean.name();
+        Bean bean = AnnotationExtractor.get(c).getAnnotation(Bean.class);
+        if (bean != null && !bean.value().equals("")) {
+            name = bean.value();
         }
         return new GeneralBeanDefinition(beanFactory, source, name, c);
     }
 
     public static GeneralBeanDefinition createByMethod(BeanFactory beanFactory, GeneralBeanDefinition configDefinition, Method m) {
-        String name = m.getAnnotation(Bean.class).name();
+        String name = AnnotationExtractor.get(m).getAnnotation(Bean.class).value();
         if (name == null || name.equals("")) {
             name = m.getReturnType().getName();
         }
 
-        Scope scope = m.getAnnotation(Scope.class);
+        Scope scope = AnnotationExtractor.get(m).getAnnotation(Scope.class);
         String scopeValue = null;
         if (scope != null) {
             scopeValue = scope.value();
         }
 
         GeneralBeanDefinition definition = new GeneralBeanDefinition(beanFactory, m.getDeclaringClass().getName() + "." + m.getName() + "()",
-                name, m.getReturnType(), scopeValue, m.getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
+                name, m.getReturnType(), scopeValue, AnnotationExtractor.get(m).getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
                 () -> BeanUtils.invoke(m, beanFactory.getBean(configDefinition.getName()), beanFactory.getBeans(m.getParameterTypes())));
-        Alias[] names = m.getAnnotationsByType(Alias.class);
+        Alias[] names = AnnotationExtractor.get(m).getAnnotationsByType(Alias.class);
         definition.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
         return definition;
     }
@@ -307,21 +308,21 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private void collectDependencies() {
         //@Injected Field依赖
         fieldDependencies = Arrays.stream(this.type.getDeclaredFields())
-                .filter(f -> f.isAnnotationPresent(Injected.class))
+                .filter(f -> AnnotationExtractor.get(f).isAnnotationPresent(Injected.class))
                 .collect(Collectors.toMap(f -> f, f -> {
-                    Injected injected = f.getAnnotation(Injected.class);
-                    External external = f.getAnnotation(External.class);
+                    Injected injected = AnnotationExtractor.get(f).getAnnotation(Injected.class);
+                    External external = AnnotationExtractor.get(f).getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
                     String name = BeanUtils.getBeanName(f, f.getType().getName());
                     return new Dependency(name, f.getGenericType(), injected.required(), desc, external != null);
                 }));
         //@Value Field依赖
         Map<Field, Dependency> valueFields = Arrays.stream(this.type.getDeclaredFields())
-                .filter(f -> f.isAnnotationPresent(Value.class))
+                .filter(f -> AnnotationExtractor.get(f).isAnnotationPresent(Value.class))
                 .collect(Collectors.toMap(f -> f, f -> {
-                    Value valueAnnotation = f.getAnnotation(Value.class);
+                    Value valueAnnotation = AnnotationExtractor.get(f).getAnnotation(Value.class);
                     String valueExpression = valueAnnotation.value();
-                    External external = f.getAnnotation(External.class);
+                    External external = AnnotationExtractor.get(f).getAnnotation(External.class);
                     String desc = external == null ? "" : external.value();
                     DependencyValueExtractor extractor = ValueExtractors.getValueExtractor(f.getGenericType(), valueAnnotation);
                     return new Dependency(valueExpression, String.class, false, desc, external != null, extractor);
@@ -329,18 +330,18 @@ public class GeneralBeanDefinition implements BeanDefinition {
         fieldDependencies.putAll(valueFields);
         //@Injected方法的参数依赖
         methodDependencies = Arrays.stream(this.type.getDeclaredMethods())
-                .filter(m -> m.isAnnotationPresent(Injected.class))
+                .filter(m -> AnnotationExtractor.get(m).isAnnotationPresent(Injected.class))
                 .collect(Collectors.toMap(m -> m, m -> {
                     return BeanUtils.getParameterDeps(m);
                 }));
         initMethods = Arrays.stream(this.type.getDeclaredMethods())
-                .filter(m -> m.isAnnotationPresent(PostConstruct.class))
+                .filter(m -> AnnotationExtractor.get(m).isAnnotationPresent(PostConstruct.class))
                 .toList();
 
         if (factory == null) {
             Arrays.stream(this.type.getDeclaredConstructors())
                     .filter(c -> Modifier.isPublic(c.getModifiers()))
-                    .filter(c -> c.isAnnotationPresent(Factory.class))
+                    .filter(c -> AnnotationExtractor.get(c).isAnnotationPresent(Factory.class))
                     .findFirst()
                     .ifPresent(c -> {//如果有标注为@Factory的有参构造函数，则采用此构造函数生成bean
                         List<Dependency> deps = BeanUtils.getParameterDeps(c);
@@ -353,7 +354,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
             Arrays.stream(this.type.getDeclaredMethods())
                     .filter(f -> Modifier.isStatic(f.getModifiers()) && Modifier.isPublic(f.getModifiers()))
                     .filter(f -> this.type.isAssignableFrom(f.getReturnType()))
-                    .filter(f -> f.isAnnotationPresent(Factory.class))
+                    .filter(f -> AnnotationExtractor.get(f).isAnnotationPresent(Factory.class))
                     .findFirst()
                     .ifPresent(f -> {//采用@Factory静态工厂方法生成实例
                         List<Dependency> deps = BeanUtils.getParameterDeps(f);

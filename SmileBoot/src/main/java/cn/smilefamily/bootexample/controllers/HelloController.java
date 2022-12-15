@@ -1,7 +1,7 @@
 package cn.smilefamily.bootexample.controllers;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Injected;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Injected;
 import cn.smilefamily.bootexample.PrototypeBean;
 import cn.smilefamily.bootexample.RequestBean;
 import cn.smilefamily.bootexample.SessionBean;
@@ -10,15 +10,12 @@ import cn.smilefamily.web.annotation.Controller;
 import cn.smilefamily.web.annotation.Model;
 import cn.smilefamily.web.annotation.RequestBody;
 import cn.smilefamily.web.annotation.RequestMapping;
-import cn.smilefamily.web.base.BeanContextHolder;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
-@Bean
 public class HelloController {
     @Injected
     private PrototypeBean prototypeBean;

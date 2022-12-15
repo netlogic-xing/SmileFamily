@@ -1,6 +1,6 @@
 package cn.smilefamily.bootexample;
 
-import cn.smilefamily.annotation.Bean;
+import cn.smilefamily.annotation.core.Bean;
 
 @Bean
 public class User {

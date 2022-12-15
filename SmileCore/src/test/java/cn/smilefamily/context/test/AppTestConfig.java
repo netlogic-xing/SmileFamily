@@ -1,11 +1,15 @@
 package cn.smilefamily.context.test;
 
-import cn.smilefamily.annotation.Configuration;
-import cn.smilefamily.annotation.Import;
+import cn.smilefamily.annotation.core.Configuration;
+import cn.smilefamily.annotation.core.Import;
+import cn.smilefamily.annotation.core.PropertySource;
+import cn.smilefamily.annotation.core.ScanPackage;
 
-@Configuration(name = "test", files = {"classpath:application.yml",
-        "classpath:test1.yml", "classpath:test2.properties"}
-        , scanPackages = {"cn.smilefamily.context.test"})
+@Configuration("test")
+@ScanPackage("cn.smilefamily.context.test")
+@PropertySource("classpath:application.yml")
+@PropertySource("classpath:test1.yml")
+@PropertySource("classpath:test2.properties")
 @Import(DevConfig.class)
 public class AppTestConfig {
 

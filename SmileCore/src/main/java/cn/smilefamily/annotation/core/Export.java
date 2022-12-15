@@ -1,16 +1,16 @@
-package cn.smilefamily.annotation;
+package cn.smilefamily.annotation.core;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.FIELD, ElementType.PARAMETER})
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 /**
- * 标注一个依赖项应该由其他模块提供
+ * 标注Bean是导出的，其他的context中可见。在技术上，会将其导入到父context
  */
-public @interface External {
-    //对外部依赖项的描述
+public @interface Export {
+    //描述导出bean
     String value() default "";
 }

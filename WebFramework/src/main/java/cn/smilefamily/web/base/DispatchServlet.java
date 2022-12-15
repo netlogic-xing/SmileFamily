@@ -1,5 +1,6 @@
 package cn.smilefamily.web.base;
 
+import cn.smilefamily.annotation.AnnotationExtractor;
 import cn.smilefamily.context.BeanContext;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
@@ -95,16 +96,15 @@ public class DispatchServlet extends HttpServlet {
         controllerMethods = HashBasedTable.create();
         List<?> controllers = beanContext.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {
-            RequestMapping baseMapping = controller.getClass().getAnnotation(RequestMapping.class);
+            RequestMapping baseMapping = AnnotationExtractor.get(controller.getClass()).getAnnotation(RequestMapping.class);
             final String baseUri = baseMapping == null ? "" : Strings.nullToEmpty(baseMapping.value());
-            ReflectionUtils.getMethods(controller.getClass(), m -> m.isAnnotationPresent(RequestMapping.class)).forEach(m -> {
-                RequestMapping methodMapping = m.getAnnotation(RequestMapping.class);
+            ReflectionUtils.getMethods(controller.getClass(), m -> AnnotationExtractor.get(m).isAnnotationPresent(RequestMapping.class)).forEach(m -> {
+                RequestMapping methodMapping = AnnotationExtractor.get(m).getAnnotation(RequestMapping.class);
                 if (Strings.isNullOrEmpty(methodMapping.value())) {
                     throw new ControllerConfigException("@RequestMapping has no valid value for method " + m.getName() + " of " + controller.getClass().getName());
                 }
                 controllerMethods.put(methodMapping.method(), convertUriPatternToRegex(baseUri + methodMapping.value()), new RequestHandler(controller, m));
             });
-
         });
     }
 

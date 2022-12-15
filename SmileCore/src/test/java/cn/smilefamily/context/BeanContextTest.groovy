@@ -1,6 +1,6 @@
 package cn.smilefamily.context
 
-import cn.smilefamily.annotation.Profile
+import cn.smilefamily.annotation.core.Profile
 import cn.smilefamily.context.test.*
 import cn.smilefamily.iocexample.external.Driver
 import com.fasterxml.jackson.databind.ObjectMapper

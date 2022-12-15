@@ -1,9 +1,10 @@
 package cn.smilefamily.util;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.External;
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.AnnotationExtractor;
+import cn.smilefamily.annotation.core.External;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Value;
 import cn.smilefamily.bean.Dependency;
 import cn.smilefamily.bean.ValueExtractors;
 import cn.smilefamily.context.IllegalFileURLFormatException;
@@ -46,9 +47,9 @@ public class BeanUtils {
      */
     public static String getBeanName(AnnotatedElement p, String defaultName) {
         String name = null;
-        Injected injected = p.getAnnotation(Injected.class);
-        if (injected != null && injected.name() != null && !injected.name().equals("")) {
-            name = injected.name();
+        Injected injected = AnnotationExtractor.get(p).getAnnotation(Injected.class);
+        if (injected != null && injected.value() != null && !injected.value().equals("")) {
+            name = injected.value();
         }
         if (name == null) {
             name = defaultName;
@@ -245,6 +246,14 @@ public class BeanUtils {
         }
     }
 
+    public static Class<?> loadClass(String className) throws ClassNotFoundException {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = BeanUtils.class.getClassLoader();
+        }
+        return classLoader.loadClass(className);
+    }
+
     public static Object newInstance(Constructor constructor, Object... args) {
         try {
             return constructor.newInstance(args);
@@ -279,9 +288,13 @@ public class BeanUtils {
     }
 
     //此方法可用Reflections改造
-    public static Set<Class<?>> findAllAnnotatedClassIn(String packageName, Class<? extends Annotation> annotationClass) {
+    public static Set<Class<?>> findAllAnnotatedClassIn(String packageName, Class<? extends Annotation>... annotationClasses) {
+        Set<Class<?>> classes = new HashSet<>();
         Reflections reflections = new Reflections(packageName);
-        return reflections.getTypesAnnotatedWith(annotationClass);
+        return Arrays.stream(annotationClasses)
+                .map(reflections::getTypesAnnotatedWith)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
     }
 
     private static Class<?> getClass(String className, String packageName) {
@@ -303,17 +316,17 @@ public class BeanUtils {
      */
     public static List<Dependency> getParameterDeps(Executable e) {
         return Arrays.stream(e.getParameters()).map(p -> {
-            External external = p.getAnnotation(External.class);
+            External external = AnnotationExtractor.get(p).getAnnotation(External.class);
             String desc = external == null ? "" : external.value();
-            if (p.isAnnotationPresent(Value.class)) {
-                Value value = p.getAnnotation(Value.class);
+            if (AnnotationExtractor.get(p).isAnnotationPresent(Value.class)) {
+                Value value = AnnotationExtractor.get(p).getAnnotation(Value.class);
                 return new Dependency(value.value(), String.class, false, desc, external != null,
                         ValueExtractors.getValueExtractor(p.getType(), value)
                 );
             }
             String beanName = getBeanName(p, p.getType().getName());
-            if (p.isAnnotationPresent(Injected.class)) {
-                return new Dependency(beanName, p.getParameterizedType(), p.getAnnotation(Injected.class).required(), desc, external != null);
+            if (AnnotationExtractor.get(p).isAnnotationPresent(Injected.class)) {
+                return new Dependency(beanName, p.getParameterizedType(), AnnotationExtractor.get(p).getAnnotation(Injected.class).required(), desc, external != null);
             }
             return new Dependency(beanName, p.getParameterizedType(), desc, external != null);
         }).toList();

@@ -1,13 +1,13 @@
 package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Configuration;
-import cn.smilefamily.annotation.Import;
-import cn.smilefamily.annotation.Profile;
+import cn.smilefamily.annotation.AnnotationExtractor;
+import cn.smilefamily.annotation.AnnotationRegistry;
+import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.GeneralBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
+import cn.smilefamily.extension.ExtensionManager;
 import cn.smilefamily.util.BeanUtils;
 import cn.smilefamily.util.FileUtils;
 import com.fasterxml.jackson.core.JsonParser;
@@ -125,13 +125,15 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     public BeanContext(Class<?> configClass, BeanContext parent, String initPropertiesFile) {
+        //加载扩展
+        ExtensionManager.loadExtensions();
         yamlContextInitExecutor = new DelayedTaskExecutor(() -> readyToInitYamlContext);
         this.parent = parent;
         if (configClass != null) {
             //尽早获得config的name，因为解析properties和yml要用
-            Configuration configuration = configClass.getAnnotation(Configuration.class);
-            if (configuration != null && !configuration.name().equals("")) {
-                name = configuration.name();
+            Configuration configuration = AnnotationExtractor.get(configClass).getAnnotation(Configuration.class);
+            if (configuration != null && !configuration.value().equals("")) {
+                name = configuration.value();
             }
         }
         this.environment = new PropertiesContext(this);
@@ -269,7 +271,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
 
     @Override
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
-        List<Object> annotatedBeans = new ArrayList<>(beanDefinitions.values().stream().filter(bd -> bd.getType().isAnnotationPresent(annotation)).map(bd -> getBean(bd.getName())).toList());
+        List<Object> annotatedBeans = new ArrayList<>(beanDefinitions.values().stream().filter(bd -> AnnotationExtractor.get(bd.getType()).isAnnotationPresent(annotation)).map(bd -> getBean(bd.getName())).toList());
         if (parent != null) {
             annotatedBeans.addAll(parent.getBeansByAnnotation(annotation));
         }
@@ -293,8 +295,8 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     private List<BeanDefinition> buildBeanDefinitionsFromPackage(String packageName, String source) {
-        return BeanUtils.findAllAnnotatedClassIn(packageName, Bean.class).stream()
-                .filter(c -> !c.isAnnotationPresent(Profile.class) || c.getAnnotation(Profile.class).value().equals(getProfile()))
+        return BeanUtils.findAllAnnotatedClassIn(packageName, AnnotationRegistry.getSynonymousAnnotations(Bean.class)).stream()
+                .filter(c -> !AnnotationExtractor.get(c).isAnnotationPresent(Profile.class) || AnnotationExtractor.get(c).getAnnotation(Profile.class).value().equals(getProfile()))
                 .map(c -> GeneralBeanDefinition.create(this, source, c)).collect(Collectors.toList());
     }
 
@@ -367,7 +369,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
             for (String name : bd.getAliases()) {
                 BeanDefinition old = beanDefinitions.put(name, bd);
                 if (old != null) {
-                    logger.info("Bean " + bd.getName() + " is replaced");
+                    logger.info(bd + " is replaced");
                 }
             }
         }
@@ -380,27 +382,27 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
      */
     private void buildBeanDefinitionsFromConfigClass(Class<?> configClass) {
         //仅处理当前active的profile的config或未标注config
-        if (configClass.isAnnotationPresent(Profile.class) && !configClass.getAnnotation(Profile.class).value().equals(getProfile())) {
+        if (AnnotationExtractor.get(configClass).isAnnotationPresent(Profile.class) && !AnnotationExtractor.get(configClass).getAnnotation(Profile.class).value().equals(getProfile())) {
             return;
         }
-        Configuration configuration = configClass.getAnnotation(Configuration.class);
+        Configuration configuration = AnnotationExtractor.get(configClass).getAnnotation(Configuration.class);
         String source = configClass.getName();
         if (configuration != null) {
-            source = Strings.isNullOrEmpty(configClass.getName()) ? source : source + "[" + configuration.name() + "]";
-            Import importConfigs = configClass.getAnnotation(Import.class);
-            if (importConfigs != null) {
-                // Add bean imported from imported config
-                Arrays.stream(importConfigs.value()).forEach(importConfigClass -> {
-                    buildBeanDefinitionsFromConfigClass(importConfigClass);
-                });
-            }
+            source = Strings.isNullOrEmpty(configClass.getName()) ? source : source + "[" + configuration.value() + "]";
+            Import[] importConfigs = AnnotationExtractor.get(configClass).getAnnotationsByType(Import.class);
+            // Add bean imported from imported config
+            Arrays.stream(importConfigs).map(Import::value).forEach(importConfigClass -> {
+                buildBeanDefinitionsFromConfigClass(importConfigClass);
+            });
             //处理注入的属性文件
-            Arrays.stream(configuration.files()).filter(uri -> !Strings.isNullOrEmpty(uri)).forEach(uri -> {
+            PropertySource[] sources = AnnotationExtractor.get(configClass).getAnnotationsByType(PropertySource.class);
+            Arrays.stream(sources).map(PropertySource::value).filter(uri -> !Strings.isNullOrEmpty(uri)).forEach(uri -> {
                 processConfigFile(uri);
             });
 
             //扫描指定包，处理标注未@Bean的Class
-            Arrays.stream(configuration.scanPackages()).map(p -> buildBeanDefinitionsFromPackage(p, "scan " + p + " by " + configClass.getName()))
+            ScanPackage[] scanPackages = AnnotationExtractor.get(configClass).getAnnotationsByType(ScanPackage.class);
+            Arrays.stream(scanPackages).map(p -> buildBeanDefinitionsFromPackage(p.value(), "scan " + p + " by " + configClass.getName()))
                     .forEach(bds -> {
                         addBeanDefinitions(bds);
                     });
@@ -408,8 +410,8 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         }
         GeneralBeanDefinition configDefinition = GeneralBeanDefinition.create(this, source, configClass);
         addBeanDefinition(configDefinition);
-        addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> m.isAnnotationPresent(Bean.class))
-                .filter(m -> !m.isAnnotationPresent(Profile.class) || m.getAnnotation(Profile.class).value().equals(getProfile()))
+        addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> AnnotationExtractor.get(m).isAnnotationPresent(Bean.class))
+                .filter(m -> !AnnotationExtractor.get(m).isAnnotationPresent(Profile.class) || AnnotationExtractor.get(m).getAnnotation(Profile.class).value().equals(getProfile()))
                 .map(m -> GeneralBeanDefinition.createByMethod(this, configDefinition, m)).collect(Collectors.toList()));
     }
 

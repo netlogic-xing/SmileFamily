@@ -1,14 +1,14 @@
 package cn.smilefamily.iocexample.external;
 
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Value;
 
 public class Driver {
     private String name;
     @Value("${connection.port:3308}")
     private int port;
 
-    @Injected(name = "/order")
+    @Injected("/order")
     private Order order;
 
     public String getName() {

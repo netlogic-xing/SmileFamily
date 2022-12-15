@@ -1,11 +1,12 @@
 package cn.smilefamily.bootexample;
 
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Injected;
-import cn.smilefamily.annotation.Scope;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Injected;
+import cn.smilefamily.annotation.core.Scope;
+import cn.smilefamily.web.annotation.Request;
 
 @Bean
-@Scope("request")
+@Request
 public class RequestBean {
     private String name = System.currentTimeMillis()+"";
     @Injected

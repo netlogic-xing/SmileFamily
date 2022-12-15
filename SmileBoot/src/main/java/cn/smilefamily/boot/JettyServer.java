@@ -1,6 +1,6 @@
 package cn.smilefamily.boot;
 
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Value;
 import cn.smilefamily.context.BeanContext;
 import cn.smilefamily.context.BeanFactory;
 import org.eclipse.jetty.server.Connector;

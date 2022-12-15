@@ -1,14 +1,14 @@
 package cn.smilefamily.context.test;
 
 import cn.smilefamily.annotation.Alias;
-import cn.smilefamily.annotation.Bean;
-import cn.smilefamily.annotation.Configuration;
-import cn.smilefamily.annotation.Profile;
+import cn.smilefamily.annotation.core.Bean;
+import cn.smilefamily.annotation.core.Configuration;
+import cn.smilefamily.annotation.core.Profile;
 
 @Configuration
 @Profile(Profile.DEV)
 public class DevConfig {
-    @Bean(name="thePerson")
+    @Bean("thePerson")
     @Alias("superman")
     @Alias("ironman")
     public Person thePerson(){

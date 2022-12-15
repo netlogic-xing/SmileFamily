@@ -1,6 +1,6 @@
 package cn.smilefamily.iocexample.external;
 
-import cn.smilefamily.annotation.Value;
+import cn.smilefamily.annotation.core.Value;
 
 public class DataSource {
     private String name;
