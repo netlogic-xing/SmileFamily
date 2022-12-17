@@ -2,6 +2,7 @@ package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.core.Profile;
+import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.PropertyBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
@@ -95,6 +96,11 @@ class PropertiesContext implements Context {
     @Override
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
         throw new UnsupportedOperationException("PropertiesContext doesn't support getBeansByAnnotation");
+    }
+
+    @Override
+    public List<AdvisorDefinition> getAdvisorDefinitions() {
+        throw new UnsupportedOperationException("PropertiesContext doesn't support getAdvisorDefinitions");
     }
 
     @Override

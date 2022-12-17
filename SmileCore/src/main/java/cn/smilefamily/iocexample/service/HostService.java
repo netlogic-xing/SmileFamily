@@ -16,6 +16,9 @@ public class HostService {
     public void doAction() {
         System.out.println(dataSource);
     }
+    public void doSomething(String name, int age, String source){
+        System.out.println("name = " + name + ", age = " + age + ", source = " +source);
+    }
 
     @PostConstruct
     public void show() {

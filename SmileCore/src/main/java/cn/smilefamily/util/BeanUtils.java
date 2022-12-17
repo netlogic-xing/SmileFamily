@@ -1,7 +1,6 @@
 package cn.smilefamily.util;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.AnnotationExtractor;
 import cn.smilefamily.annotation.core.External;
 import cn.smilefamily.annotation.core.Injected;
 import cn.smilefamily.annotation.core.Value;
@@ -30,6 +29,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static cn.smilefamily.annotation.EnhancedAnnotatedElement.wrap;
+
 public class BeanUtils {
     private static ObjectMapper mapper;
 
@@ -47,7 +48,7 @@ public class BeanUtils {
      */
     public static String getBeanName(AnnotatedElement p, String defaultName) {
         String name = null;
-        Injected injected = AnnotationExtractor.get(p).getAnnotation(Injected.class);
+        Injected injected = wrap(p).getAnnotation(Injected.class);
         if (injected != null && injected.value() != null && !injected.value().equals("")) {
             name = injected.value();
         }
@@ -246,6 +247,52 @@ public class BeanUtils {
         }
     }
 
+    // The main function that checks if
+// two given strings match. The pattern string
+// may contain wildcard characters
+    public static boolean match(String pattern, String input) {
+
+        // If we reach at the end of both strings,
+        // we are done
+        if (pattern.length() == 0 && input.length() == 0)
+            return true;
+// Make sure to eliminate consecutive '*'
+        if (pattern.length() > 1 && pattern.charAt(0) == '*') {
+            int i = 0;
+            while (i + 1 < pattern.length() && pattern.charAt(i + 1) == '*')
+                i++;
+            pattern = pattern.substring(i);
+        }
+
+        // Make sure that the characters after '*'
+        // are present in input string.
+        // This function assumes that the pattern
+        // string will not contain two consecutive '*'
+        if (pattern.length() > 1 && pattern.charAt(0) == '*' &&
+                input.length() == 0)
+            return false;
+
+        // If the pattern string contains '?',
+        // or current characters of both strings match
+        if ((pattern.length() > 1 && pattern.charAt(0) == '?') ||
+                (pattern.length() != 0 && input.length() != 0 &&
+                        pattern.charAt(0) == input.charAt(0)))
+            return match(pattern.substring(1),
+                    input.substring(1));
+
+        // If there is *, then there are two possibilities
+        // a) We consider current character of input string
+        // b) We ignore current character of input string.
+        if (pattern.length() > 0 && pattern.charAt(0) == '*')
+            return match(pattern.substring(1), input) ||
+                    match(pattern, input.substring(1));
+        return false;
+    }
+
+
+// This code is contributed by
+// sanjeev2552
+
     public static Class<?> loadClass(String className) throws ClassNotFoundException {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {
@@ -316,17 +363,17 @@ public class BeanUtils {
      */
     public static List<Dependency> getParameterDeps(Executable e) {
         return Arrays.stream(e.getParameters()).map(p -> {
-            External external = AnnotationExtractor.get(p).getAnnotation(External.class);
+            External external = wrap(p).getAnnotation(External.class);
             String desc = external == null ? "" : external.value();
-            if (AnnotationExtractor.get(p).isAnnotationPresent(Value.class)) {
-                Value value = AnnotationExtractor.get(p).getAnnotation(Value.class);
+            if (wrap(p).isAnnotationPresent(Value.class)) {
+                Value value = wrap(p).getAnnotation(Value.class);
                 return new Dependency(value.value(), String.class, false, desc, external != null,
                         ValueExtractors.getValueExtractor(p.getType(), value)
                 );
             }
             String beanName = getBeanName(p, p.getType().getName());
-            if (AnnotationExtractor.get(p).isAnnotationPresent(Injected.class)) {
-                return new Dependency(beanName, p.getParameterizedType(), AnnotationExtractor.get(p).getAnnotation(Injected.class).required(), desc, external != null);
+            if (wrap(p).isAnnotationPresent(Injected.class)) {
+                return new Dependency(beanName, p.getParameterizedType(), wrap(p).getAnnotation(Injected.class).required(), desc, external != null);
             }
             return new Dependency(beanName, p.getParameterizedType(), desc, external != null);
         }).toList();

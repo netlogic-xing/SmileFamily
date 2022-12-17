@@ -1,4 +1,4 @@
-package cn.smilefamily.web.annotation;
+package cn.smilefamily.annotation.aop;
 
 import cn.smilefamily.annotation.Attribute;
 import cn.smilefamily.annotation.SameAs;
@@ -9,11 +9,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@SameAs(value = Bean.class,
-        attributes = {
-                @Attribute(name = "value", always = "className")
-        })
-public @interface Controller {
+public @interface Aspect {
 }

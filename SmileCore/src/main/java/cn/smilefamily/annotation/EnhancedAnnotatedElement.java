@@ -6,18 +6,15 @@ import javassist.util.proxy.ProxyFactory;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Optional;
 
-public class AnnotationExtractor implements AnnotatedElement {
+public class EnhancedAnnotatedElement implements AnnotatedElement {
     private AnnotatedElement target;
-    private static ConcurrentMap<AnnotatedElement, AnnotationExtractor> instances = new ConcurrentHashMap<>();
-
-    public static AnnotatedElement get(AnnotatedElement target) {
-        return instances.computeIfAbsent(target, key -> new AnnotationExtractor(target));
+    public static EnhancedAnnotatedElement wrap(AnnotatedElement target) {
+        return new EnhancedAnnotatedElement(target);
     }
 
-    public AnnotationExtractor(AnnotatedElement target) {
+    public EnhancedAnnotatedElement(AnnotatedElement target) {
         this.target = target;
     }
 
@@ -55,7 +52,6 @@ public class AnnotationExtractor implements AnnotatedElement {
         }
         return null;
     }
-
     @Override
     public Annotation[] getAnnotations() {
         return target.getAnnotations();

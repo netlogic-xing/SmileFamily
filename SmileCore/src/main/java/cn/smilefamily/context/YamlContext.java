@@ -1,5 +1,6 @@
 package cn.smilefamily.context;
 
+import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.util.BeanUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -54,6 +55,11 @@ class YamlContext implements Context {
     @Override
     public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
         throw new UnsupportedOperationException("PropertiesContext doesn't support getBeansByAnnotation");
+    }
+
+    @Override
+    public List<AdvisorDefinition> getAdvisorDefinitions() {
+        throw new UnsupportedOperationException("PropertiesContext doesn't support getAdvisorDefinitions");
     }
 
     @Override

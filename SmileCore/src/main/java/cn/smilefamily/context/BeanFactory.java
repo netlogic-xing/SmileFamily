@@ -1,6 +1,7 @@
 package cn.smilefamily.context;
 
 import cn.smilefamily.BeanNotFoundException;
+import cn.smilefamily.aop.AdvisorDefinition;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
@@ -36,4 +37,10 @@ public interface BeanFactory {
         T bean = getBean(name);
         return bean == null ? defaultValue : bean;
     }
+
+    /**
+     * 用于实现aop，最终用户不需要使用此方法
+     * @return
+     */
+    public List<AdvisorDefinition> getAdvisorDefinitions();
 }

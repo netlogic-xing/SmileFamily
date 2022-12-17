@@ -1,6 +1,8 @@
 package cn.smilefamily.annotation;
 
 
+import cn.smilefamily.annotation.aop.Aspect;
+import cn.smilefamily.annotation.core.Bean;
 import cn.smilefamily.annotation.core.Scope;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
@@ -15,7 +17,6 @@ public class AnnotationRegistry {
     private static Map<Class<? extends Annotation>, AnnotationFactory> factories = new HashMap<>();
 
     static {
-
     }
 
     public static void register(Class<? extends Annotation> annotation,
