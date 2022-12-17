@@ -83,19 +83,6 @@ class PropertiesContextTest extends Specification {
         propertiesContext.getBean("@nameplate") == "hostauto"
         propertiesContext.getBean("@appName") == "HostAuto"
         propertiesContext.getBean("hostauto_port", String.class) == "30"
-        when:
-        propertiesContext.importBeanDefinitions()
-        then:
-        thrown(UnsupportedOperationException)
-        when:
-        propertiesContext.getBeansByAnnotation()
-        then:
-        thrown(UnsupportedOperationException)
-        when:
-        propertiesContext.setParent()
-        propertiesContext.getName()
-        then:
-        thrown(NullPointerException)
     }
 
     def "GetBean by name[placeholder not found]"() {

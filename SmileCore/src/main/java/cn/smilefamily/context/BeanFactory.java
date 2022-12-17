@@ -15,8 +15,6 @@ public interface BeanFactory {
 
     <T> T getBean(String name, Type beanType);
 
-    public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation);
-
     public default <T> T getBean(Class<T> clazz) {
         return getBean(clazz.getName(), clazz);
     }
@@ -38,9 +36,5 @@ public interface BeanFactory {
         return bean == null ? defaultValue : bean;
     }
 
-    /**
-     * 用于实现aop，最终用户不需要使用此方法
-     * @return
-     */
-    public List<AdvisorDefinition> getAdvisorDefinitions();
+
 }

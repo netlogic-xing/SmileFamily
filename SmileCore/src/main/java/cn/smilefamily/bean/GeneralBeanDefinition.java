@@ -5,8 +5,11 @@ import cn.smilefamily.annotation.Alias;
 import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
-import cn.smilefamily.context.BeanFactory;
+import cn.smilefamily.context.BeanContext;
+import cn.smilefamily.context.Context;
 import cn.smilefamily.util.BeanUtils;
+import javassist.util.proxy.Proxy;
+import javassist.util.proxy.ProxyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +17,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -32,7 +36,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private static DelayedTaskExecutor postConstructExecutor = new DelayedTaskExecutor("post-construct-executor", injectExecutor::isEmpty);
     //保持所有此Bean依赖的Bean的名字
     private final List<Dependency> dependencies = new ArrayList<>();
-    private BeanFactory beanFactory;
+    private Context beanFactory;
 
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
     //Bean名称（在context中的key）
@@ -73,7 +77,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     //标记此BeanDefinition是否执行了@PostConstruct方法，bean已经功能完备，可对外提供服务
     private boolean beanInitialized;
 
-    private GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz) {
+    private GeneralBeanDefinition(Context beanFactory, String source, String name, Class<?> clazz) {
         this.beanFactory = beanFactory;
         this.name = name;
         this.aliases.add(name);
@@ -109,7 +113,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
      * @param deps    生成Bean的方法参数，假定全部都能在Context中找到
      * @param factory 闭包，包裹生成Bean的方法及参数
      */
-    private GeneralBeanDefinition(BeanFactory beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
+    private GeneralBeanDefinition(Context beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
                                   List<Dependency> deps, Supplier<?> factory) {
         this(beanFactory, source, name, clazz);
         this.exported = export != null;
@@ -134,19 +138,19 @@ public class GeneralBeanDefinition implements BeanDefinition {
                 "\tfrom: " + source;
     }
 
-    public static GeneralBeanDefinition create(BeanFactory beanFactory, Class<?> clazz) {
+    public static GeneralBeanDefinition create(Context beanFactory, Class<?> clazz) {
         return new GeneralBeanDefinition(beanFactory, null, clazz.getName(), clazz);
     }
 
-    public static GeneralBeanDefinition create(BeanFactory beanFactory, String name, Class<?> clazz, Supplier<Object> factory, String source) {
+    public static GeneralBeanDefinition create(Context beanFactory, String name, Class<?> clazz, Supplier<Object> factory, String source) {
         return new GeneralBeanDefinition(beanFactory, source, name, clazz, null, wrap(clazz).getAnnotation(Export.class), Collections.emptyList(), factory);
     }
 
-    public static GeneralBeanDefinition create(BeanFactory beanFactory, Object bean) {
+    public static GeneralBeanDefinition create(Context beanFactory, Object bean) {
         return new GeneralBeanDefinition(beanFactory, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
     }
 
-    public static GeneralBeanDefinition create(BeanFactory beanFactory, String source, Class<?> c) {
+    public static GeneralBeanDefinition create(Context beanFactory, String source, Class<?> c) {
         String name = c.getName();
         Bean bean = wrap(c).getAnnotation(Bean.class);
         if (bean != null && !bean.value().equals("")) {
@@ -155,7 +159,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
         return new GeneralBeanDefinition(beanFactory, source, name, c);
     }
 
-    public static GeneralBeanDefinition createByMethod(BeanFactory beanFactory, GeneralBeanDefinition configDefinition, Method m) {
+    public static GeneralBeanDefinition createByMethod(Context beanFactory, GeneralBeanDefinition configDefinition, Method m) {
         String name = wrap(m).getAnnotation(Bean.class).value();
         if (name == null || name.equals("")) {
             name = m.getReturnType().getName();
@@ -180,13 +184,11 @@ public class GeneralBeanDefinition implements BeanDefinition {
         return source;
     }
 
-    @Override
-    public boolean isSingleton() {
+    private boolean isSingleton() {
         return Scope.Singleton.equals(scope);
     }
 
-    @Override
-    public boolean isPrototype() {
+    private boolean isPrototype() {
         return Scope.Prototype.contains(scope);
     }
 
@@ -194,16 +196,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
         return scope;
     }
 
-    public Object getProxy() {
-        return proxy;
-    }
-
-    public void setProxy(Object proxy) {
-        this.proxy = proxy;
-    }
-
-    @Override
-    public boolean isCustomizedScope() {
+    private boolean isCustomizedScope() {
         return !isPrototype() && !isSingleton();
     }
 
@@ -304,9 +297,42 @@ public class GeneralBeanDefinition implements BeanDefinition {
 
     @Override
     public Object getBeanInstance() {
+        if (isPrototype()) {
+            reset();
+            initialize();
+        }
+        if (isSingleton()) {
+            initialize();
+        }
+        if (isCustomizedScope()) {
+            if (proxy == null) {
+                proxy = createScopedProxy();
+            }
+            return proxy;
+        }
         return beanInstance;
     }
-
+    private Object createScopedProxy() {
+        ProxyFactory factory = new ProxyFactory();
+        factory.setSuperclass(getType());
+        //factory.writeDirectory="./code";
+        Object proxyBean = BeanUtils.newInstance(factory.createClass());
+        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
+            logger.debug("intercept " + m.getName() + "@" + getName() + "@" + getScope());
+            ConcurrentMap container = ((BeanContext)beanFactory).getScopedBeanContainer(getScope());
+            if (container == null) {
+                throw new BeanInitializationException("Cannot use bean " + getName() + " with scope " + getScope() + ", current thread is not attached to scope " + getScope());
+            }
+            Object target = container.computeIfAbsent(this, key -> {
+                logger.debug("====== create new real instance for " + getName());
+                reset();
+                initialize();
+                return beanInstance;
+            });
+            return m.invoke(target, args);
+        });
+       return proxyBean;
+    }
     /**
      * 搜集依赖性
      */

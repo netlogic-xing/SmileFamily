@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-class YamlContext implements Context {
+class YamlContext implements BeanFactory {
     private record YamlSource(String source, JsonNode root) {
     }
 
@@ -53,41 +53,10 @@ class YamlContext implements Context {
     }
 
     @Override
-    public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support getBeansByAnnotation");
-    }
-
-    @Override
-    public List<AdvisorDefinition> getAdvisorDefinitions() {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support getAdvisorDefinitions");
-    }
-
-    @Override
     public String getName() {
         return this.host.getName();
     }
 
-    @Override
-    public String getProfile() {
-        throw new UnsupportedOperationException("YamlContext doesn't support getProfile");
-    }
-
-    @Override
-    public void setParent(BeanContext parent) {
-        this.host = parent;
-    }
-
-    @Override
-    public List<BeanDefinition> export() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public void importBeanDefinitions(List<BeanDefinition> bds) {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support importBeanDefinitions");
-    }
-
-    @Override
     public void build() {
     }
 }

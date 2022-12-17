@@ -15,8 +15,6 @@ import cn.smilefamily.util.FileUtils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Strings;
-import javassist.util.proxy.Proxy;
-import javassist.util.proxy.ProxyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,17 +31,17 @@ import static cn.smilefamily.annotation.EnhancedAnnotatedElement.wrap;
 /**
  * JavaConfig类解析器，解析配置类，生成BeanDefinition集合，并最终生成Context
  */
-public class BeanContext implements Context, ContextScopeSupportable, OperationBeanFactory {
+public class BeanContext implements Context, ContextScopeSupportable {
     private static final Logger logger = LoggerFactory.getLogger(BeanContext.class);
     /**
      * context唯一标识，用于多个context管理
      */
     private String name = "root";
-    private static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
+    public static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
     /**
      * parent环境，查找bean时如果在自身没找到，就到parent找。
      */
-    private BeanContext parent;
+    private Context parent;
 
     private PropertiesContext environment;
     private YamlContext configBeanFactory;
@@ -66,7 +64,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
 
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
-    private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainer = new ThreadLocal<>();
+    private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainers = new ThreadLocal<>();
     private boolean initialized;
 
     public BeanContext(Class<?> configClass) {
@@ -113,7 +111,7 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     }
 
     @Override
-    public void setParent(BeanContext parent) {
+    public void setParent(Context parent) {
         this.parent = parent;
     }
 
@@ -159,13 +157,16 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         }
         this.environment.initialize();
     }
-
-    private Map<String, ConcurrentMap<BeanDefinition, Object>> getScopedContainer() {
-        Map<String, ConcurrentMap<BeanDefinition, Object>> container = threadLocalScopedBeanContainer.get();
-        if (container == null && parent != null) {
-            container = parent.getScopedContainer();
+    @Override
+    public ConcurrentMap<BeanDefinition, Object> getScopedBeanContainer(String scopeName){
+        Map<String, ConcurrentMap<BeanDefinition, Object>> containers = threadLocalScopedBeanContainers.get();
+        if (containers == null && parent != null&&parent instanceof ContextScopeSupportable supportableParent) {
+            return supportableParent.getScopedBeanContainer(scopeName);
         }
-        return container;
+        if (containers == null) {
+            throw new BeanInitializationException("containers not existed");
+        }
+        return containers.get(SCOPED_BEAN_CONTAINER_PREFIX+scopeName);
     }
 
     /**
@@ -209,52 +210,18 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
         if (bd == null) {
             return null;
         }
-        if (bd.isPrototype()) {
-            ((GeneralBeanDefinition) bd).reset();
-            bd.initialize();
-        }
-        if (bd.isSingleton()) {
-            bd.initialize();
-        }
-        if (bd.isCustomizedScope()) {
-            if (((GeneralBeanDefinition) bd).getProxy() == null) {
-                setProxy((GeneralBeanDefinition) bd);
-            }
-            return ((GeneralBeanDefinition) bd).getProxy();
-        }
-        Object beanInstance = bd.getBeanInstance();
-        return beanInstance;
+        return bd.getBeanInstance();
     }
 
-    private void setProxy(GeneralBeanDefinition bd) {
-        ProxyFactory factory = new ProxyFactory();
-        factory.setSuperclass(bd.getType());
-        //factory.writeDirectory="./code";
-        Object proxyBean = BeanUtils.newInstance(factory.createClass());
-        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
-            logger.debug("intercept " + m.getName() + "@" + bd.getName() + "@" + bd.getScope());
-            ConcurrentMap container = getScopedContainer().get(SCOPED_BEAN_CONTAINER_PREFIX + bd.getScope());
-            if (container == null) {
-                throw new BeanInitializationException("Cannot use bean " + bd.getName() + " with scope " + bd.getScope() + ", current thread is not attached to scope " + bd.getScope());
-            }
-            Object target = container.computeIfAbsent(bd, key -> {
-                logger.debug("====== create new real instance for " + bd.getName());
-                bd.reset();
-                bd.initialize();
-                return bd.getBeanInstance();
-            });
-            return m.invoke(target, args);
-        });
-        bd.setProxy(proxyBean);
-    }
+
 
     @Override
     public void createScope(String scope, ConcurrentMap<BeanDefinition, Object> scopedContext) {
         logger.info("create " + scope + " context " + Thread.currentThread());
-        Map<String, ConcurrentMap<BeanDefinition, Object>> container = threadLocalScopedBeanContainer.get();
+        Map<String, ConcurrentMap<BeanDefinition, Object>> container = threadLocalScopedBeanContainers.get();
         if (container == null) {
             container = new HashMap<>();
-            threadLocalScopedBeanContainer.set(container);
+            threadLocalScopedBeanContainers.set(container);
         }
         container.put(SCOPED_BEAN_CONTAINER_PREFIX + scope, scopedContext);
     }
@@ -262,18 +229,22 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
     @Override
     public void destroyScope(String scope) {
         logger.info("destroy " + scope + " context");
-        Map<String, ConcurrentMap<BeanDefinition, Object>> container = getScopedContainer();
-        if (container == null) {
-            throw new BeanInitializationException("container for " + scope + " not existed");
-        }
-        Map<? extends BeanDefinition, Object> scopedContext = container.get(SCOPED_BEAN_CONTAINER_PREFIX + scope);
+        Map<? extends BeanDefinition, Object> scopedContext = getScopedBeanContainer(scope);
         if (scopedContext == null) {
             throw new BeanInitializationException("scope " + scope + " not existed yet");
         }
         scopedContext.forEach((bd, bean) -> {
             bd.destroy(bean);
         });
-        container.remove(SCOPED_BEAN_CONTAINER_PREFIX + scope);
+        Map<String, ConcurrentMap<BeanDefinition, Object>> containers = threadLocalScopedBeanContainers.get();
+        if (parent != null&&parent instanceof ContextScopeSupportable supportableParent) {
+            supportableParent.destroyScope(scope);
+            return;
+        }
+        if (containers == null) {
+            throw new BeanInitializationException("containers not existed");
+        }
+        containers.remove(SCOPED_BEAN_CONTAINER_PREFIX+ scope);
     }
 
     @Override
@@ -304,6 +275,11 @@ public class BeanContext implements Context, ContextScopeSupportable, OperationB
             bd.initialize();
         });
         initialized = true;
+    }
+
+    @Override
+    public Context getContext() {
+        return this;
     }
 
     private <T> List<T> scanPackage(String packageName, Class<? extends Annotation> annClass, Function<Class<?>, T> f) {

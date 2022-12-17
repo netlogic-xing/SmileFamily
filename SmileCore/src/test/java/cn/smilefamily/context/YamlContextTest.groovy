@@ -44,15 +44,6 @@ family:
     }
 
 
-    def "GetBeansByAnnotation"() {
-        YamlContext context = new YamlContext()
-        when:
-        context.getBeansByAnnotation()
-        then:
-        thrown(UnsupportedOperationException)
-
-    }
-
     def "GetName"() {
         given:
         Context host = Mock() {
@@ -63,28 +54,7 @@ family:
         yamlContext.getName() == "host"
     }
 
-    def "SetParent"() {
-        YamlContext context = new YamlContext()
-        when:
-        context.setParent()
-        context.getName()
-        then:
-        thrown(NullPointerException)
-    }
 
-    def "Export"() {
-        YamlContext context = new YamlContext()
-        expect:
-        context.export().isEmpty()
-    }
-
-    def "ImportBeanDefinitions"() {
-        YamlContext context = new YamlContext()
-        when:
-        context.importBeanDefinitions()
-        then:
-        thrown(UnsupportedOperationException)
-    }
 
     def "Build"() {
         YamlContext context = new YamlContext()

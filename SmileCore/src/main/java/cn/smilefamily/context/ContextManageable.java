@@ -9,11 +9,13 @@ public interface ContextManageable {
 
     String getProfile();
 
-    void setParent(BeanContext parent);
+    void setParent(Context parent);
 
     List<BeanDefinition> export();
 
     void importBeanDefinitions(List<BeanDefinition> bds);
 
     void build();
+
+    Context getContext();
 }

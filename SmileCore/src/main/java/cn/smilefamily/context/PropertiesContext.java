@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * 代表一个属性文件的context，仅共host context内部使用。
  */
-class PropertiesContext implements Context {
+class PropertiesContext implements BeanFactory {
     private record PropertySource(String source, Map<String, String> properties) {
     }
 
@@ -89,24 +89,15 @@ class PropertiesContext implements Context {
     }
 
     @Override
+    public String getName() {
+        return host.getName();
+    }
+
+    @Override
     public <T> T getBean(String name, Type beanType) {
         return (T) getBean(name);
     }
 
-    @Override
-    public List<?> getBeansByAnnotation(Class<? extends Annotation> annotation) {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support getBeansByAnnotation");
-    }
-
-    @Override
-    public List<AdvisorDefinition> getAdvisorDefinitions() {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support getAdvisorDefinitions");
-    }
-
-    @Override
-    public String getName() {
-        return host.getName();
-    }
 
     /**
      * Find active profile from:
@@ -115,27 +106,15 @@ class PropertiesContext implements Context {
      * 3. default value
      * @return
      */
-    @Override
     public String getProfile() {
         return System.getProperty(Profile.ACTIVE_KEY, (String) getBean(Profile.ACTIVE_KEY));
     }
 
-    @Override
-    public void setParent(BeanContext parent) {
-        this.host = parent;
-    }
 
-    @Override
     public List<BeanDefinition> export() {
         return beanDefinitions.values().stream().filter(bd -> bd.isExported()).toList();
     }
 
-    @Override
-    public void importBeanDefinitions(List<BeanDefinition> bds) {
-        throw new UnsupportedOperationException("PropertiesContext doesn't support importBeanDefinitions");
-    }
-
-    @Override
     public void build() {
         if (constructionComplete) {
             return;

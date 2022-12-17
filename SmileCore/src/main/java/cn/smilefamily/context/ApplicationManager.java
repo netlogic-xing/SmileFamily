@@ -16,39 +16,39 @@ public class ApplicationManager {
     private static ApplicationManager instance = new ApplicationManager();
     private boolean initialized = false;
 
-    private AtomicReference<BeanContext> rootContext = new AtomicReference<>();
+    private AtomicReference<ContextManageable> rootContext = new AtomicReference<>();
 
-    private ConcurrentMap<String, BeanContext> children = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, ContextManageable> children = new ConcurrentHashMap<>();
 
-    public BeanContext getRootContext() {
-        return rootContext.get();
+    public Context getRootContext() {
+        return rootContext.get().getContext();
     }
 
-    public void addContext(BeanContext child) {
+    public void addContext(ContextManageable child) {
         //默认把第一个context设置为root
         if (rootContext.compareAndSet(null, child)) {
             return;
         }
-        BeanContext old = children.putIfAbsent(child.getName(), child);
-        child.setParent(rootContext.get());
+        ContextManageable old = children.putIfAbsent(child.getName(), child);
+        child.setParent(rootContext.get().getContext());
         rootContext.get().importBeanDefinitions(child.export());
         if (old != null) {
             logger.info("BeanContext " + child.getName() + " is replaced.");
         }
     }
 
-    public BeanContext getContext(String name) {
+    public Context getContext(String name) {
 
-        BeanContext beanContext = children.get(name);
+        ContextManageable beanContext = children.get(name);
         if (beanContext == null) {
-            return rootContext.get();
+            return rootContext.get().getContext();
         }
-        return beanContext;
+        return beanContext.getContext();
     }
 
-    public void setRootContext(BeanContext rootContext) {
+    public void setRootContext(ContextManageable rootContext) {
         //显式设置root后，原来默认root降级为child
-        BeanContext old = this.rootContext.getAndSet(rootContext);
+        ContextManageable old = this.rootContext.getAndSet(rootContext);
         if (old != null) {
             addContext(old);
         }

@@ -9,20 +9,7 @@ public interface BeanDefinition {
     default String getDescription() {
         return null;
     }
-
-    default boolean isSingleton() {
-        return true;
-    }
-
     Class<?> getType();
-
-    default boolean isPrototype() {
-        return false;
-    }
-
-    default boolean isCustomizedScope() {
-        return false;
-    }
 
     boolean isExported();
 
