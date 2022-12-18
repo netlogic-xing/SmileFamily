@@ -9,6 +9,9 @@ import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.GeneralBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
+import cn.smilefamily.common.dev.Trace;
+import cn.smilefamily.common.dev.TraceInfo;
+import cn.smilefamily.common.dev.TraceParam;
 import cn.smilefamily.extension.ExtensionManager;
 import cn.smilefamily.util.BeanUtils;
 import cn.smilefamily.util.FileUtils;
@@ -27,6 +30,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static cn.smilefamily.annotation.EnhancedAnnotatedElement.wrap;
+import static cn.smilefamily.common.MiscUtils.shortName;
 
 /**
  * JavaConfig类解析器，解析配置类，生成BeanDefinition集合，并最终生成Context
@@ -129,10 +133,16 @@ public class BeanContext implements Context, ContextScopeSupportable {
         return beanDefinitions.values().stream().toList();
     }
 
+    @TraceInfo
+    public String traceInfo() {
+        return shortName(this.getClass().getName()) + "<" + name + ">";
+    }
+
+    @Trace
     public BeanContext(Class<?> configClass, BeanContext parent, String initPropertiesFile) {
         //加载扩展
         ExtensionManager.loadExtensions();
-        yamlContextInitExecutor = new DelayedTaskExecutor(() -> readyToInitYamlContext);
+        yamlContextInitExecutor = new DelayedTaskExecutor("yamlContextInitExecutor", () -> readyToInitYamlContext);
         this.parent = parent;
         if (configClass != null) {
             //尽早获得config的name，因为解析properties和yml要用
@@ -151,22 +161,21 @@ public class BeanContext implements Context, ContextScopeSupportable {
             // Add bean defined within the config class
             buildBeanDefinitionsFromConfigClass(configClass);
 
-            //Add special bean context self.
-            addBean(this, "Special bean");
             ApplicationManager.getInstance().addContext(this);
         }
         this.environment.initialize();
     }
+
     @Override
-    public ConcurrentMap<BeanDefinition, Object> getScopedBeanContainer(String scopeName){
+    public ConcurrentMap<BeanDefinition, Object> getScopedBeanContainer(String scopeName) {
         Map<String, ConcurrentMap<BeanDefinition, Object>> containers = threadLocalScopedBeanContainers.get();
-        if (containers == null && parent != null&&parent instanceof ContextScopeSupportable supportableParent) {
+        if (containers == null && parent != null && parent instanceof ContextScopeSupportable supportableParent) {
             return supportableParent.getScopedBeanContainer(scopeName);
         }
         if (containers == null) {
             throw new BeanInitializationException("containers not existed");
         }
-        return containers.get(SCOPED_BEAN_CONTAINER_PREFIX+scopeName);
+        return containers.get(SCOPED_BEAN_CONTAINER_PREFIX + scopeName);
     }
 
     /**
@@ -181,6 +190,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
     }
 
     @Override
+    @Trace
     public <T> T getBean(String name, Type beanType) {
         T bean = (T) getBeanInThisContext(name);
         if (bean != null) {
@@ -214,7 +224,6 @@ public class BeanContext implements Context, ContextScopeSupportable {
     }
 
 
-
     @Override
     public void createScope(String scope, ConcurrentMap<BeanDefinition, Object> scopedContext) {
         logger.info("create " + scope + " context " + Thread.currentThread());
@@ -237,14 +246,14 @@ public class BeanContext implements Context, ContextScopeSupportable {
             bd.destroy(bean);
         });
         Map<String, ConcurrentMap<BeanDefinition, Object>> containers = threadLocalScopedBeanContainers.get();
-        if (parent != null&&parent instanceof ContextScopeSupportable supportableParent) {
+        if (parent != null && parent instanceof ContextScopeSupportable supportableParent) {
             supportableParent.destroyScope(scope);
             return;
         }
         if (containers == null) {
             throw new BeanInitializationException("containers not existed");
         }
-        containers.remove(SCOPED_BEAN_CONTAINER_PREFIX+ scope);
+        containers.remove(SCOPED_BEAN_CONTAINER_PREFIX + scope);
     }
 
     @Override
@@ -258,11 +267,12 @@ public class BeanContext implements Context, ContextScopeSupportable {
 
     @Override
     public List<AdvisorDefinition> getAdvisorDefinitions() {
-        return null;
+        return advisorDefinitions;
     }
 
 
     @Override
+    @Trace
     public void build() {
         if (initialized) {
             return;
@@ -352,6 +362,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
         addBeanDefinitions(Collections.singletonList(bd));
     }
 
+    @Trace
     private void addBeanDefinitions(List<? extends BeanDefinition> bds) {
         for (BeanDefinition bd : bds) {
             for (String name : bd.getAliases()) {
@@ -418,7 +429,8 @@ public class BeanContext implements Context, ContextScopeSupportable {
     }
 
     @Override
-    public BeanDefinition putBean(String name, Class<?> clazz, Supplier<Object> factory, String source) {
+    @Trace
+    public BeanDefinition putBean(String name, @TraceParam(false) Class<?> clazz, @TraceParam(false) Supplier<Object> factory, @TraceParam(false) String source) {
         GeneralBeanDefinition bd = GeneralBeanDefinition.create(this, name, clazz, factory, source);
         addBeanDefinition(bd);
         return bd;

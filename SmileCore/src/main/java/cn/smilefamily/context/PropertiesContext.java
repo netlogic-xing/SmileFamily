@@ -38,7 +38,7 @@ class PropertiesContext implements BeanFactory {
     }
 
     public void initialize() {
-        propertyEvaluator = new DelayedTaskExecutor(() -> constructionComplete);
+        propertyEvaluator = new DelayedTaskExecutor("propertyEvaluator", () -> constructionComplete);
         propertySources.forEach(propSrc -> {
             propSrc.properties.forEach((key, val) -> {
                 if (!key.contains("${") && !val.contains("${")) {

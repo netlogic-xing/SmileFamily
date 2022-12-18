@@ -1,5 +1,6 @@
 package cn.smilefamily.extension;
 
+import cn.smilefamily.common.MiscUtils;
 import cn.smilefamily.util.BeanUtils;
 import cn.smilefamily.util.FileUtils;
 import org.slf4j.Logger;
@@ -30,7 +31,7 @@ public class ExtensionManager {
             extensions.forEach((extension, impl) -> {
                 logger.info("load " + extension + ", implementation: " + impl);
                 try {
-                    Class<?> extensionClass = BeanUtils.loadClass(impl);
+                    Class<?> extensionClass = MiscUtils.loadClass(impl);
                     Extension extensionInstance = (Extension) BeanUtils.newInstance(extensionClass);
                     extensionInstance.load();
                     extensionRegistry.put(extensionInstance.name(), extensionInstance);

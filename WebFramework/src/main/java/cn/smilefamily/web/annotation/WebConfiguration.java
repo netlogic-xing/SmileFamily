@@ -12,5 +12,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @SameAs(Configuration.class)
 public @interface WebConfiguration {
-    String value() default "";
+    String value() default "webConfig";
 }

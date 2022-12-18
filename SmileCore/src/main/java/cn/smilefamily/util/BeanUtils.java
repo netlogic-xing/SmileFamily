@@ -293,46 +293,6 @@ public class BeanUtils {
 // This code is contributed by
 // sanjeev2552
 
-    public static Class<?> loadClass(String className) throws ClassNotFoundException {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        if (classLoader == null) {
-            classLoader = BeanUtils.class.getClassLoader();
-        }
-        return classLoader.loadClass(className);
-    }
-
-    public static Object newInstance(Constructor constructor, Object... args) {
-        try {
-            return constructor.newInstance(args);
-        } catch (Exception e) {
-            throw new BeanInitializationException(e);
-        }
-    }
-
-    public static Object invoke(Method method, Object target, Object... args) {
-        try {
-            return method.invoke(target, args);
-        } catch (Exception e) {
-            throw new BeanInitializationException(e);
-        }
-    }
-
-    public static Object invokeStatic(Method method, Object... args) {
-        try {
-            return method.invoke(null, args);
-        } catch (Exception e) {
-            throw new BeanInitializationException(e);
-        }
-    }
-
-    public static void setField(Field field, Object target, Object value) {
-        try {
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (IllegalAccessException e) {
-            throw new BeanInitializationException(e);
-        }
-    }
 
     //此方法可用Reflections改造
     public static Set<Class<?>> findAllAnnotatedClassIn(String packageName, Class<? extends Annotation>... annotationClasses) {

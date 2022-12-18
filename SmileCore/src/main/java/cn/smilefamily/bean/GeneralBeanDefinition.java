@@ -5,6 +5,8 @@ import cn.smilefamily.annotation.Alias;
 import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
+import cn.smilefamily.common.MiscUtils;
+import cn.smilefamily.common.dev.TraceInfo;
 import cn.smilefamily.context.BeanContext;
 import cn.smilefamily.context.Context;
 import cn.smilefamily.util.BeanUtils;
@@ -36,7 +38,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private static DelayedTaskExecutor postConstructExecutor = new DelayedTaskExecutor("post-construct-executor", injectExecutor::isEmpty);
     //保持所有此Bean依赖的Bean的名字
     private final List<Dependency> dependencies = new ArrayList<>();
-    private Context beanFactory;
+    private Context context;
 
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
     //Bean名称（在context中的key）
@@ -77,8 +79,8 @@ public class GeneralBeanDefinition implements BeanDefinition {
     //标记此BeanDefinition是否执行了@PostConstruct方法，bean已经功能完备，可对外提供服务
     private boolean beanInitialized;
 
-    private GeneralBeanDefinition(Context beanFactory, String source, String name, Class<?> clazz) {
-        this.beanFactory = beanFactory;
+    private GeneralBeanDefinition(Context context, String source, String name, Class<?> clazz) {
+        this.context = context;
         this.name = name;
         this.aliases.add(name);
         this.type = clazz;
@@ -113,9 +115,9 @@ public class GeneralBeanDefinition implements BeanDefinition {
      * @param deps    生成Bean的方法参数，假定全部都能在Context中找到
      * @param factory 闭包，包裹生成Bean的方法及参数
      */
-    private GeneralBeanDefinition(Context beanFactory, String source, String name, Class<?> clazz, String scope, Export export,
+    private GeneralBeanDefinition(Context context, String source, String name, Class<?> clazz, String scope, Export export,
                                   List<Dependency> deps, Supplier<?> factory) {
-        this(beanFactory, source, name, clazz);
+        this(context, source, name, clazz);
         this.exported = export != null;
         if (this.exported) {
             this.description = export.value();
@@ -138,28 +140,28 @@ public class GeneralBeanDefinition implements BeanDefinition {
                 "\tfrom: " + source;
     }
 
-    public static GeneralBeanDefinition create(Context beanFactory, Class<?> clazz) {
-        return new GeneralBeanDefinition(beanFactory, null, clazz.getName(), clazz);
+    public static GeneralBeanDefinition create(Context context, Class<?> clazz) {
+        return new GeneralBeanDefinition(context, null, clazz.getName(), clazz);
     }
 
-    public static GeneralBeanDefinition create(Context beanFactory, String name, Class<?> clazz, Supplier<Object> factory, String source) {
-        return new GeneralBeanDefinition(beanFactory, source, name, clazz, null, wrap(clazz).getAnnotation(Export.class), Collections.emptyList(), factory);
+    public static GeneralBeanDefinition create(Context context, String name, Class<?> clazz, Supplier<Object> factory, String source) {
+        return new GeneralBeanDefinition(context, source, name, clazz, null, wrap(clazz).getAnnotation(Export.class), Collections.emptyList(), factory);
     }
 
-    public static GeneralBeanDefinition create(Context beanFactory, Object bean) {
-        return new GeneralBeanDefinition(beanFactory, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+    public static GeneralBeanDefinition create(Context context, Object bean) {
+        return new GeneralBeanDefinition(context, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
     }
 
-    public static GeneralBeanDefinition create(Context beanFactory, String source, Class<?> c) {
+    public static GeneralBeanDefinition create(Context context, String source, Class<?> c) {
         String name = c.getName();
         Bean bean = wrap(c).getAnnotation(Bean.class);
         if (bean != null && !bean.value().equals("")) {
             name = bean.value();
         }
-        return new GeneralBeanDefinition(beanFactory, source, name, c);
+        return new GeneralBeanDefinition(context, source, name, c);
     }
 
-    public static GeneralBeanDefinition createByMethod(Context beanFactory, GeneralBeanDefinition configDefinition, Method m) {
+    public static GeneralBeanDefinition createByMethod(Context context, GeneralBeanDefinition configDefinition, Method m) {
         String name = wrap(m).getAnnotation(Bean.class).value();
         if (name == null || name.equals("")) {
             name = m.getReturnType().getName();
@@ -171,9 +173,9 @@ public class GeneralBeanDefinition implements BeanDefinition {
             scopeValue = scope.value();
         }
 
-        GeneralBeanDefinition definition = new GeneralBeanDefinition(beanFactory, m.getDeclaringClass().getName() + "." + m.getName() + "()",
+        GeneralBeanDefinition definition = new GeneralBeanDefinition(context, m.getDeclaringClass().getName() + "." + m.getName() + "()",
                 name, m.getReturnType(), scopeValue, wrap(m).getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
-                () -> BeanUtils.invoke(m, beanFactory.getBean(configDefinition.getName()), beanFactory.getBeans(m.getParameterTypes())));
+                () -> MiscUtils.invoke(m, context.getBean(configDefinition.getName()), context.getBeans(m.getParameterTypes())));
         Alias[] names = wrap(m).getAnnotationsByType(Alias.class);
         definition.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
         return definition;
@@ -210,6 +212,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     }
 
     @Override
+    @TraceInfo
     public String getName() {
         return name;
     }
@@ -232,7 +235,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
         }
         dependencyStack.addLast(name);
         logger.debug("dependency chains " + dependencyStack.stream().collect(Collectors.joining("->")));
-        if (beanInstance == null) {//优先采用bean工厂闭包生成Bean
+        if (beanInstance == null) {
             beanInstance = factory.get();
         }
         dependencyStack.removeLast();
@@ -258,6 +261,14 @@ public class GeneralBeanDefinition implements BeanDefinition {
         debugStack.removeLast();
     }
 
+    /**
+     * 为aop做准备工作
+     */
+    @Override
+    public void preInitialize() {
+        advisorDefinitions.addAll(this.context.getAdvisorDefinitions().stream().filter(a -> a.accept(this)).toList());
+    }
+
     public void reset() {
         beanInstance = null;
         beanCreated = false;
@@ -275,12 +286,12 @@ public class GeneralBeanDefinition implements BeanDefinition {
             return;
         }
         fieldDependencies.forEach((f, dep) -> {
-            dep.setDepValue(beanFactory, val -> {
-                BeanUtils.setField(f, beanInstance, val);
+            dep.setDepValue(context, val -> {
+                MiscUtils.setField(f, beanInstance, val);
             });
         });
         methodDependencies.forEach((m, deps) -> {
-            BeanUtils.invoke(m, beanInstance, deps.stream().map(dep -> dep.getDepValue(beanFactory)).toArray());
+            MiscUtils.invoke(m, beanInstance, deps.stream().map(dep -> dep.getDepValue(context)).toArray());
         });
         beanInjectionCompleted = true;
     }
@@ -290,7 +301,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
             return;
         }
         initMethods.forEach(m -> {
-            BeanUtils.invoke(m, beanInstance, BeanUtils.getParameterDeps(m).stream().map(p -> p.getDepValue(beanFactory)).toArray());
+            MiscUtils.invoke(m, beanInstance, BeanUtils.getParameterDeps(m).stream().map(p -> p.getDepValue(context)).toArray());
         });
         beanInitialized = true;
     }
@@ -312,27 +323,29 @@ public class GeneralBeanDefinition implements BeanDefinition {
         }
         return beanInstance;
     }
+
     private Object createScopedProxy() {
         ProxyFactory factory = new ProxyFactory();
         factory.setSuperclass(getType());
         //factory.writeDirectory="./code";
         Object proxyBean = BeanUtils.newInstance(factory.createClass());
         ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
-            logger.debug("intercept " + m.getName() + "@" + getName() + "@" + getScope());
-            ConcurrentMap container = ((BeanContext)beanFactory).getScopedBeanContainer(getScope());
+            logger.info("intercept " + m.getName() + "@" + getName() + "@" + getScope());
+            ConcurrentMap container = ((BeanContext) context).getScopedBeanContainer(getScope());
             if (container == null) {
                 throw new BeanInitializationException("Cannot use bean " + getName() + " with scope " + getScope() + ", current thread is not attached to scope " + getScope());
             }
             Object target = container.computeIfAbsent(this, key -> {
-                logger.debug("====== create new real instance for " + getName());
+                logger.info("====== create new real instance for " + getName());
                 reset();
                 initialize();
                 return beanInstance;
             });
             return m.invoke(target, args);
         });
-       return proxyBean;
+        return proxyBean;
     }
+
     /**
      * 搜集依赖性
      */
@@ -377,7 +390,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     .ifPresent(c -> {//如果有标注为@Factory的有参构造函数，则采用此构造函数生成bean
                         List<Dependency> deps = BeanUtils.getParameterDeps(c);
                         dependencies.addAll(deps);
-                        factory = () -> BeanUtils.newInstance(c, deps.stream().map(p -> p.getDepValue(beanFactory)).toArray());
+                        factory = () -> MiscUtils.newInstance(c, deps.stream().map(p -> p.getDepValue(context)).toArray());
                     });
         }
 
@@ -390,7 +403,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
                     .ifPresent(f -> {//采用@Factory静态工厂方法生成实例
                         List<Dependency> deps = BeanUtils.getParameterDeps(f);
                         dependencies.addAll(deps);
-                        factory = () -> BeanUtils.invokeStatic(f, deps.stream().map(p -> p.getDepValue(beanFactory)).toArray());
+                        factory = () -> MiscUtils.invokeStatic(f, deps.stream().map(p -> p.getDepValue(context)).toArray());
                     });
         }
 

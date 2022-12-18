@@ -49,6 +49,7 @@ public interface Context extends ContextManageable, BeanFactory {
      */
     public default void addBeanAndInjectDependencies(String name, Object bean, String source) {
         BeanDefinition bd = putBean(name, bean.getClass(), () -> bean, source);
+        bd.preInitialize();
         bd.initialize();
     }
 

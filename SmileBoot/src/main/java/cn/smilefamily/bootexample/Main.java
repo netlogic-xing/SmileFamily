@@ -10,19 +10,11 @@ import cn.smilefamily.web.view.ThymeleafViewRenderer;
 
 import javax.servlet.ServletContext;
 
-@WebConfiguration
-@ScanPackage("cn.smilefamily.bootexample")
+
 public class Main extends WebApplication {
     public static void main(String[] args) {
         Main main = new Main();
         main.start();
     }
-    @Bean
-    public ThymeleafViewRenderer thymeleafViewRenderer(ServletContext servletContext){
-        return new ThymeleafViewRenderer(servletContext);
-    }
-    @WebInit
-    public void initWeb(){
 
-    }
 }

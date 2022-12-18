@@ -23,7 +23,17 @@ public interface BeanDefinition {
         return Collections.singletonList(getName());
     }
 
+    /**
+     * 用于创建bean，注入依赖，执行post construct等
+     */
     default void initialize() {
+
+    }
+
+    /**
+     * 在bean创建前执行，由于设置依赖关系等
+     */
+    default void preInitialize(){
 
     }
 
