@@ -2,7 +2,7 @@ package cn.smilefamily.context;
 
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
-import cn.smilefamily.bean.GeneralBeanDefinition;
+import cn.smilefamily.bean.BeanDefinitionBase;
 
 import java.lang.annotation.Annotation;
 import java.util.Date;
@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 public interface Context extends ContextManageable, BeanFactory {
     /**
      * 用于实现aop，最终用户不需要使用此方法
+     *
      * @return
      */
     public List<AdvisorDefinition> getAdvisorDefinitions();
@@ -21,6 +22,7 @@ public interface Context extends ContextManageable, BeanFactory {
     default void addBean(String name, Class<?> clazz, String source, Supplier<Object> factory) {
         putBean(name, clazz, factory, source);
     }
+
     BeanDefinition putBean(String name, Class<?> clazz, Supplier<Object> factory, String source);
 
     public default void addBean(Object bean, String source) {
@@ -33,7 +35,6 @@ public interface Context extends ContextManageable, BeanFactory {
     }
 
 
-
     public default void addBeanAndInjectDependencies(Object bean) {
         this.addBeanAndInjectDependencies(bean.getClass().getName(), bean, "add by user@" + new Date());
     }
@@ -41,6 +42,7 @@ public interface Context extends ContextManageable, BeanFactory {
     public default void addBeanAndInjectDependencies(Object bean, String source) {
         this.addBeanAndInjectDependencies(bean.getClass().getName(), bean, source);
     }
+
     /**
      * Add bean to context directly and autowire the bean. Usually, used after context is built.
      *
@@ -72,12 +74,12 @@ public interface Context extends ContextManageable, BeanFactory {
     }
 
     public default Object inject(Object bean) {
-        BeanDefinition bd = GeneralBeanDefinition.create(this, bean);
+        BeanDefinition bd = BeanDefinitionBase.create(this, bean);
         return bd.getBeanInstance();
     }
 
     public default Object create(Class<?> clazz) {
-        BeanDefinition bd = GeneralBeanDefinition.create(this, clazz);
+        BeanDefinition bd = BeanDefinitionBase.create(this, "free-bean add by user", clazz);
         return bd.getBeanInstance();
     }
 }

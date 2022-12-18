@@ -1,20 +1,16 @@
 package cn.smilefamily.context;
 
-import cn.smilefamily.bean.GeneralBeanDefinition;
+import cn.smilefamily.bean.BeanDefinitionBase;
 import cn.smilefamily.common.dev.Debug;
 import org.aspectj.lang.reflect.ConstructorSignature;
 import org.aspectj.lang.reflect.MethodSignature;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Optional;
 
 import static cn.smilefamily.common.MiscUtils.shortName;
 
 public aspect CallStack {
-    pointcut keypoint(GeneralBeanDefinition bd):execution(public * *(..))&&within(GeneralBeanDefinition)
+    pointcut keypoint(BeanDefinitionBase bd):execution(public * *(..))&&within(BeanDefinitionBase)
             &&!execution(* getName())&&target(bd)&&!adviceexecution()
             &&!execution(* get*(..))
             &&!execution(* toString())
@@ -27,10 +23,10 @@ public aspect CallStack {
             &&!execution(* getName())
             &&!execution(* toString());
 
-    before(GeneralBeanDefinition bd):keypoint(bd){
+    before(BeanDefinitionBase bd):keypoint(bd){
         Debug.enter( shortName(thisJoinPoint.getSignature().getDeclaringType().getName()) +"." + thisJoinPoint.getSignature().getName() + "[" + bd.getName() + "]");
     }
-    after(GeneralBeanDefinition bd):keypoint(bd){
+    after(BeanDefinitionBase bd):keypoint(bd){
         Debug.leave();
         //System.out.println("end------" + " ".repeat(4*deep) + thisJoinPoint.getSignature().getName()+ " args:" + Arrays.asList(thisJoinPoint.getArgs()));
     }

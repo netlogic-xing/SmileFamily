@@ -15,6 +15,7 @@ import javassist.util.proxy.ProxyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -28,9 +29,9 @@ import static cn.smilefamily.annotation.EnhancedAnnotatedElement.wrap;
 /**
  * Bean定义核心类。在此框架中，不管是通过扫描标注为@Bean的类还是在JavaConfig中配置的Bean，都会先生成BeanDefinition。
  */
-public class GeneralBeanDefinition implements BeanDefinition {
+public abstract class BeanDefinitionBase implements BeanDefinition {
     private static final Logger logger = LoggerFactory
-            .getLogger(GeneralBeanDefinition.class);
+            .getLogger(BeanDefinitionBase.class);
     private static Deque<String> dependencyStack = new ArrayDeque<>();
     private static Deque<String> debugStack = new ArrayDeque<>();
 
@@ -38,7 +39,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private static DelayedTaskExecutor postConstructExecutor = new DelayedTaskExecutor("post-construct-executor", injectExecutor::isEmpty);
     //保持所有此Bean依赖的Bean的名字
     private final List<Dependency> dependencies = new ArrayList<>();
-    private Context context;
+    protected Context context;
 
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
     //Bean名称（在context中的key）
@@ -55,10 +56,12 @@ public class GeneralBeanDefinition implements BeanDefinition {
 
     private String scope;
 
-    private Object proxy;
+    public String getScope() {
+        return scope;
+    }
 
     //用于生成Bean实例的工厂函数
-    private Supplier<?> factory;
+    protected Supplier<?> factory;
     //所有标注为@Injected@Value的field
     private Map<Field, Dependency> fieldDependencies = new HashMap<>();
     //所有标注为@Autowired的方法
@@ -67,7 +70,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
     private List<Method> initMethods = new ArrayList<>();
     //此BeanDefinition生成的实例（单例），一个BeanInstance不为空，表示bean实例已经生成，可以作为被依赖相注入到别的Bean。但其功能不一定
     //完备，不一定能对外提供服务（也就上程序员用）
-    private Object beanInstance;
+    protected Object beanInstance;
     //标记bean是否创建（创建但未注入，未初始化，仅可以用于建立依赖）
     private boolean beanCreated;
 
@@ -79,54 +82,17 @@ public class GeneralBeanDefinition implements BeanDefinition {
     //标记此BeanDefinition是否执行了@PostConstruct方法，bean已经功能完备，可对外提供服务
     private boolean beanInitialized;
 
-    private GeneralBeanDefinition(Context context, String source, String name, Class<?> clazz) {
+    private BeanDefinitionBase(Context context, String name, Class<?> clazz) {
         this.context = context;
         this.name = name;
         this.aliases.add(name);
         this.type = clazz;
-        this.source = source;
-        Export export = wrap(type).getAnnotation(Export.class);
-        exported = export != null;
-        if (exported) {
-            this.description = export.value();
-        }
-        Scope s = wrap(type).getAnnotation(Scope.class);
-        if (s == null) {
-            this.scope = Scope.Singleton;
-        } else {
-            this.scope = s.value();
-        }
-        Alias[] names = wrap(type).getAnnotationsByType(Alias.class);
-        this.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
-        collectDependencies();
     }
 
 
     @Override
     public List<String> getAliases() {
         return aliases;
-    }
-
-    /**
-     * 用于在生成JavaConfig中@Bean标注的方法定义的Bean
-     *
-     * @param name    Bean名称
-     * @param clazz   Bean类型
-     * @param deps    生成Bean的方法参数，假定全部都能在Context中找到
-     * @param factory 闭包，包裹生成Bean的方法及参数
-     */
-    private GeneralBeanDefinition(Context context, String source, String name, Class<?> clazz, String scope, Export export,
-                                  List<Dependency> deps, Supplier<?> factory) {
-        this(context, source, name, clazz);
-        this.exported = export != null;
-        if (this.exported) {
-            this.description = export.value();
-        }
-        if (scope != null && !scope.equals("")) {
-            this.scope = scope;
-        }
-        this.factory = factory;
-        this.dependencies.addAll(deps);
     }
 
     @Override
@@ -136,49 +102,115 @@ public class GeneralBeanDefinition implements BeanDefinition {
 
     @Override
     public String toString() {
-        return "Bean(" + name + "/" + scope + ")\n" +
+        return "Bean(" + name + ")\n" +
                 "\tfrom: " + source;
     }
 
-    public static GeneralBeanDefinition create(Context context, Class<?> clazz) {
-        return new GeneralBeanDefinition(context, null, clazz.getName(), clazz);
+    private static String getScope(AnnotatedElement element) {
+        String scope = null;
+        Scope s = wrap(element).getAnnotation(Scope.class);
+        if (s == null) {
+            scope = Scope.Singleton;
+        } else {
+            scope = s.value();
+        }
+        return scope;
     }
 
-    public static GeneralBeanDefinition create(Context context, String name, Class<?> clazz, Supplier<Object> factory, String source) {
-        return new GeneralBeanDefinition(context, source, name, clazz, null, wrap(clazz).getAnnotation(Export.class), Collections.emptyList(), factory);
+    public static BeanDefinitionBase create(Context context, String name, Class<?> clazz, Supplier<Object> factory, String source) {
+        String scope = getScope(clazz);
+        return newInstance(context, name, clazz, scope)
+                .source(source).factory(factory)
+                .export(clazz).aliases(clazz)
+                .build();
     }
 
-    public static GeneralBeanDefinition create(Context context, Object bean) {
-        return new GeneralBeanDefinition(context, null, bean.getClass().getName(), bean.getClass(), null, null, Collections.emptyList(), () -> bean);
+    /**
+     * free-bean
+     *
+     * @param context
+     * @param bean
+     * @return
+     */
+    public static BeanDefinitionBase create(Context context, Object bean) {
+        return newInstance(context, "free-bean", bean.getClass(), Scope.Singleton).factory(() -> bean).build();
     }
 
-    public static GeneralBeanDefinition create(Context context, String source, Class<?> c) {
+    private BeanDefinitionBase source(String source) {
+        this.source = source;
+        return this;
+    }
+
+    private BeanDefinitionBase export(AnnotatedElement e) {
+        Export export = wrap(e).getAnnotation(Export.class);
+        this.exported = export != null;
+        this.description = export != null ? export.value() : "";
+        return this;
+    }
+
+    private BeanDefinitionBase extraDeps(List<Dependency> deps) {
+        this.dependencies.addAll(deps);
+        return this;
+    }
+
+    private BeanDefinitionBase factory(Supplier<Object> factory) {
+        this.factory = factory;
+        return this;
+    }
+
+    private BeanDefinitionBase scope(String scope) {
+        this.scope = scope;
+        return this;
+    }
+
+    private BeanDefinitionBase aliases(AnnotatedElement e) {
+        Alias[] names = wrap(e).getAnnotationsByType(Alias.class);
+        this.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
+        return this;
+    }
+
+    private static BeanDefinitionBase newInstance(Context context, String name, Class<?> clazz, String scope) {
+        BeanDefinitionBase definitionBase = switch (scope) {
+            case Scope.Singleton -> new SingletonBeanDefinition(context, name, clazz);
+            case Scope.Prototype -> new PrototypeBeanDefinition(context, name, clazz);
+            default -> CustomizedScopedBeanDefinition.createProxy(context, name, clazz);
+        };
+        return definitionBase.scope(scope);
+    }
+
+    /**
+     * scan package
+     *
+     * @param context
+     * @param source
+     * @param c
+     * @return
+     */
+    public static BeanDefinitionBase create(Context context, String source, Class<?> c) {
+        return newInstance(context, getName(c), c, getScope(c)).
+                source(source).aliases(c).export(c).build();
+    }
+
+    private static String getName(Class<?> c) {
         String name = c.getName();
         Bean bean = wrap(c).getAnnotation(Bean.class);
         if (bean != null && !bean.value().equals("")) {
             name = bean.value();
         }
-        return new GeneralBeanDefinition(context, source, name, c);
+        return name;
     }
 
-    public static GeneralBeanDefinition createByMethod(Context context, GeneralBeanDefinition configDefinition, Method m) {
+    public static BeanDefinitionBase createByMethod(Context context, BeanDefinitionBase configDefinition, Method m) {
         String name = wrap(m).getAnnotation(Bean.class).value();
         if (name == null || name.equals("")) {
             name = m.getReturnType().getName();
         }
-
-        Scope scope = wrap(m).getAnnotation(Scope.class);
-        String scopeValue = null;
-        if (scope != null) {
-            scopeValue = scope.value();
-        }
-
-        GeneralBeanDefinition definition = new GeneralBeanDefinition(context, m.getDeclaringClass().getName() + "." + m.getName() + "()",
-                name, m.getReturnType(), scopeValue, wrap(m).getAnnotation(Export.class), BeanUtils.getParameterDeps(m),
-                () -> MiscUtils.invoke(m, context.getBean(configDefinition.getName()), context.getBeans(m.getParameterTypes())));
-        Alias[] names = wrap(m).getAnnotationsByType(Alias.class);
-        definition.aliases.addAll(Arrays.stream(names).map(alias -> alias.value()).toList());
-        return definition;
+        String scopeValue = getScope(m);
+        return newInstance(context, name, m.getReturnType(), scopeValue).export(m)
+                .extraDeps(BeanUtils.getParameterDeps(m))
+                .source(m.getDeclaringClass().getName() + "." + m.getName() + "()")
+                .factory(() -> MiscUtils.invoke(m, context.getBean(configDefinition.getName()), context.getBeans(m.getParameterTypes()))).
+                aliases(m).build();
     }
 
     @Override
@@ -186,20 +218,90 @@ public class GeneralBeanDefinition implements BeanDefinition {
         return source;
     }
 
-    private boolean isSingleton() {
-        return Scope.Singleton.equals(scope);
+    private static class SingletonBeanDefinition extends BeanDefinitionBase {
+        private SingletonBeanDefinition(Context context, String name, Class<?> clazz) {
+            super(context, name, clazz);
+        }
+
+        @Override
+        public void reset() {
+        }
+
+        @Override
+        public Object getBeanInstance() {
+            initialize();
+            return beanInstance;
+        }
     }
 
-    private boolean isPrototype() {
-        return Scope.Prototype.contains(scope);
+    private static class PrototypeBeanDefinition extends BeanDefinitionBase {
+        private PrototypeBeanDefinition(Context context, String name, Class<?> clazz) {
+            super(context, name, clazz);
+        }
+
+        @Override
+        public Object getBeanInstance() {
+            reset();
+            initialize();
+            return beanInstance;
+        }
     }
 
-    public String getScope() {
-        return scope;
-    }
+    private static class CustomizedScopedBeanDefinition extends BeanDefinitionBase implements Cloneable {
+        private BeanDefinitionBase targetBeanDefinition;
 
-    private boolean isCustomizedScope() {
-        return !isPrototype() && !isSingleton();
+        private CustomizedScopedBeanDefinition(Context context, String name, Class<?> clazz) {
+            super(context, name, clazz);
+        }
+
+        public static BeanDefinitionBase createProxy(Context context, String name, Class<?> clazz) {
+
+            return new CustomizedScopedBeanDefinition(context, name, clazz);
+        }
+
+        @Override
+        protected BeanDefinitionBase build() {
+            super.build();
+            this.targetBeanDefinition = (CustomizedScopedBeanDefinition) this.clone();
+            this.factory = () -> createScopedProxy();
+            return this;
+        }
+
+        @Override
+        protected Object clone() {
+            try {
+                return super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public Object getBeanInstance() {
+            initialize();
+            return beanInstance;
+        }
+
+        private Object createScopedProxy() {
+            ProxyFactory factory = new ProxyFactory();
+            factory.setSuperclass(getType());
+            //factory.writeDirectory="./code";
+            Object proxyBean = BeanUtils.newInstance(factory.createClass());
+            ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
+                logger.debug("intercept " + m.getName() + "@" + getName() + "@" + getScope());
+                ConcurrentMap container = ((BeanContext) context).getScopedBeanContainer(getScope());
+                if (container == null) {
+                    throw new BeanInitializationException("Cannot use bean " + getName() + " with scope " + getScope() + ", current thread is not attached to scope " + getScope());
+                }
+                Object target = container.computeIfAbsent(targetBeanDefinition, key -> {
+                    logger.debug("====== create new real instance for " + getName());
+                    targetBeanDefinition.reset();
+                    return targetBeanDefinition.getBeanInstance();
+                });
+                return m.invoke(target, args);
+            });
+            return proxyBean;
+        }
     }
 
     @Override
@@ -277,7 +379,6 @@ public class GeneralBeanDefinition implements BeanDefinition {
         beanInitialized = false;
     }
 
-
     /**
      * 为所以标注为@Autowired和@Value的Field注入对应Bean然后在调用标注为@Autowired的方法
      */
@@ -306,50 +407,11 @@ public class GeneralBeanDefinition implements BeanDefinition {
         beanInitialized = true;
     }
 
-    @Override
-    public Object getBeanInstance() {
-        if (isPrototype()) {
-            reset();
-            initialize();
-        }
-        if (isSingleton()) {
-            initialize();
-        }
-        if (isCustomizedScope()) {
-            if (proxy == null) {
-                proxy = createScopedProxy();
-            }
-            return proxy;
-        }
-        return beanInstance;
-    }
-
-    private Object createScopedProxy() {
-        ProxyFactory factory = new ProxyFactory();
-        factory.setSuperclass(getType());
-        //factory.writeDirectory="./code";
-        Object proxyBean = BeanUtils.newInstance(factory.createClass());
-        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
-            logger.info("intercept " + m.getName() + "@" + getName() + "@" + getScope());
-            ConcurrentMap container = ((BeanContext) context).getScopedBeanContainer(getScope());
-            if (container == null) {
-                throw new BeanInitializationException("Cannot use bean " + getName() + " with scope " + getScope() + ", current thread is not attached to scope " + getScope());
-            }
-            Object target = container.computeIfAbsent(this, key -> {
-                logger.info("====== create new real instance for " + getName());
-                reset();
-                initialize();
-                return beanInstance;
-            });
-            return m.invoke(target, args);
-        });
-        return proxyBean;
-    }
 
     /**
-     * 搜集依赖性
+     * 最终创建bean
      */
-    private void collectDependencies() {
+    protected BeanDefinitionBase build() {
         //@Injected Field依赖
         fieldDependencies = Arrays.stream(this.type.getDeclaredFields())
                 .filter(f -> wrap(f).isAnnotationPresent(Injected.class))
@@ -412,6 +474,7 @@ public class GeneralBeanDefinition implements BeanDefinition {
         }
         dependencies.addAll(fieldDependencies.values());
         dependencies.addAll(methodDependencies.values().stream().flatMap(Collection::stream).toList());
+        return this;
     }
 
 }

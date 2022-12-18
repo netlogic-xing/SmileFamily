@@ -7,7 +7,7 @@ import cn.smilefamily.annotation.aop.ScanAspect;
 import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
-import cn.smilefamily.bean.GeneralBeanDefinition;
+import cn.smilefamily.bean.BeanDefinitionBase;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.common.dev.Trace;
 import cn.smilefamily.common.dev.TraceInfo;
@@ -410,28 +410,28 @@ public class BeanContext implements Context, ContextScopeSupportable {
             ScanAspect[] scanAspects = wrap(configClass).getAnnotationsByType(ScanAspect.class);
             Arrays.stream(scanAspects).map(p -> scanPackage(p.value(), Aspect.class, c -> {
                         advisorDefinitions.addAll(AdvisorDefinition.buildFrom(c));
-                        return GeneralBeanDefinition.create(this, "scan " + p + " by " + configClass.getName(), c);
+                        return BeanDefinitionBase.create(this, "scan " + p + " by " + configClass.getName(), c);
                     }))
                     .forEach(bds -> {
                         addBeanDefinitions(bds);
                     });
 
         }
-        GeneralBeanDefinition configDefinition = GeneralBeanDefinition.create(this, source, configClass);
+        BeanDefinitionBase configDefinition = BeanDefinitionBase.create(this, source, configClass);
         addBeanDefinition(configDefinition);
         addBeanDefinitions(Arrays.stream(configClass.getMethods()).filter(m -> wrap(m).isAnnotationPresent(Bean.class))
                 .filter(m -> !wrap(m).isAnnotationPresent(Profile.class) || wrap(m).getAnnotation(Profile.class).value().equals(getProfile()))
-                .map(m -> GeneralBeanDefinition.createByMethod(this, configDefinition, m)).collect(Collectors.toList()));
+                .map(m -> BeanDefinitionBase.createByMethod(this, configDefinition, m)).collect(Collectors.toList()));
     }
 
-    private List<GeneralBeanDefinition> buildBeanDefinitionsFromPackage(String packageName, String source) {
-        return scanPackage(packageName, Bean.class, c -> GeneralBeanDefinition.create(this, source, c));
+    private List<BeanDefinitionBase> buildBeanDefinitionsFromPackage(String packageName, String source) {
+        return scanPackage(packageName, Bean.class, c -> BeanDefinitionBase.create(this, source, c));
     }
 
     @Override
     @Trace
     public BeanDefinition putBean(String name, @TraceParam(false) Class<?> clazz, @TraceParam(false) Supplier<Object> factory, @TraceParam(false) String source) {
-        GeneralBeanDefinition bd = GeneralBeanDefinition.create(this, name, clazz, factory, source);
+        BeanDefinitionBase bd = BeanDefinitionBase.create(this, name, clazz, factory, source);
         addBeanDefinition(bd);
         return bd;
     }
