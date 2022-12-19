@@ -6,6 +6,7 @@ import cn.smilefamily.bean.BeanDefinitionBase;
 import cn.smilefamily.common.MiscUtils;
 import cn.smilefamily.util.BeanUtils;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Primitives;
 import org.reflections.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -37,35 +38,65 @@ public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
         }
     }
 
-    public Object invokeAdvice(BeanDefinition bd, Object target, Object self, Method targetMethod, Object[] callArgs, Object result, Throwable e) {
-        return MiscUtils.invoke(adviceMethod, aspectBeanDefinition.getBeanInstance(), constructArgs(bd, target, self, targetMethod, callArgs, result, e));
+    public Object invokeAdvice(BeanDefinition bd, Object target, Object self, Method targetMethod,Method proceed, Object[] callArgs, Object result, Throwable e) {
+        return MiscUtils.invoke(adviceMethod, aspectBeanDefinition.getBeanInstance(), constructArgs(bd, target, self, targetMethod,proceed, callArgs, result, e));
     }
 
-    public Object[] constructArgs(BeanDefinition bd, Object target, Object self, Method targetMethod, Object[] callArgs, Object result, Throwable e) {
+    private void checkTypeMatch(Parameter p, Object arg, String message) {
+        if (arg == null) {
+            if(p.getType().isPrimitive()) {
+                throw new AspectInjectException(p + " of " + adviceMethod + " cannot accept null");
+            }
+            return;
+        }
+        if (!p.getType().isAssignableFrom(Primitives.unwrap(arg.getClass()))) {
+            throw new AspectInjectException(message);
+        }
+    }
+
+    public Object[] constructArgs(BeanDefinition bd, Object target, Object self, Method targetMethod,Method proceed,  Object[] callArgs, Object result, Throwable e) {
         Parameter[] parameters = adviceMethod.getParameters();
         Object[] arguments = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
             if (param.isAnnotationPresent(Return.class)) {
+                checkTypeMatch(param, result, param + " of " + adviceMethod + " cannot match the @Return type of " + result);
                 arguments[i] = result;
                 continue;
             }
+            if (param.isAnnotationPresent(OrderValue.class)) {
+                checkTypeMatch(param, order, param + " of " + adviceMethod + " cannot match the @OrderValue type int");
+                arguments[i] = order;
+                continue;
+            }
             if (param.isAnnotationPresent(Throw.class)) {
+                checkTypeMatch(param, e, param + " of " + adviceMethod + " cannot match the @Throw type of " + e);
                 arguments[i] = e;
+                continue;
             }
             if (param.isAnnotationPresent(BeanName.class)) {
+                checkTypeMatch(param, bd.getName(), param + " of " + adviceMethod + " cannot match the @BeanName type " + String.class);
                 arguments[i] = bd.getName();
+                continue;
             }
             if (param.isAnnotationPresent(This.class)) {
+                checkTypeMatch(param, self, param + " of " + adviceMethod + " cannot match the @This type " + self.getClass());
                 arguments[i] = self;
                 continue;
             }
             if (param.isAnnotationPresent(TargetObject.class)) {
+                checkTypeMatch(param, target, param + " of " + adviceMethod + " cannot match the @TargetObject type " + target.getClass());
                 arguments[i] = target;
                 continue;
             }
-            if (param.isAnnotationPresent(cn.smilefamily.annotation.aop.Method.class)) {
+            if (param.isAnnotationPresent(TargetMethod.class)) {
+                checkTypeMatch(param, targetMethod, param + " of " + adviceMethod + " cannot match the @TargetMethod type " + targetMethod.getClass());
                 arguments[i] = targetMethod;
+                continue;
+            }
+            if (param.isAnnotationPresent(ProceedMethod.class)) {
+                checkTypeMatch(param, proceed, param + " of " + adviceMethod + " cannot match the @TargetMethod type " + proceed.getClass());
+                arguments[i] = proceed;
                 continue;
             }
             if (param.isAnnotationPresent(Args.class)) {
@@ -82,6 +113,7 @@ public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
                 if (argName != null) {
                     int index = getArgIndex(targetParams, argName);
                     if (index != -1) {
+                        checkTypeMatch(param, callArgs[index], param + " of " + adviceMethod + " cannot match the " + arg + " of " + targetMethod);
                         arguments[i] = callArgs[index];
                         continue;
                     }
@@ -90,19 +122,22 @@ public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
                 if (index >= callArgs.length) {
                     throw new AspectInjectException("Arg(index=" + index + ") out of the bound of " + targetMethod.getName());
                 }
+                checkTypeMatch(param, callArgs[index], param + " of " + adviceMethod + " cannot match the " + arg + " of " + targetMethod);
                 arguments[i] = callArgs[index];
                 continue;
             }
             if (param.isNamePresent()) {
                 int index = getArgIndex(targetParams, param.getName());
                 if (index != -1) {
+                    checkTypeMatch(param, callArgs[index], param + " of " + adviceMethod + " cannot match the argument " + index + " of " + targetMethod);
                     arguments[i] = callArgs[index];
                     continue;
                 }
             }
             if (i >= callArgs.length) {
-                throw new AspectInjectException("Arg(index=" + i + ") out of the bound of " + targetMethod.getName());
+                throw new AspectInjectException("Arg(index=" + i + ") out of the bound of " + targetMethod);
             }
+            checkTypeMatch(param, callArgs[i], param + " of " + adviceMethod + " cannot match the argument " + i + " of " + targetMethod);
             arguments[i] = callArgs[i];
         }
         return arguments;
@@ -120,7 +155,15 @@ public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
     public AdviceType getAdviceType() {
         return adviceType;
     }
-
+    public boolean isPrefix(){
+        return adviceType == AdviceType.BeforeAdvice || adviceType == AdviceType.AroundAdvice;
+    }
+    public boolean isAround(){
+        return adviceType == AdviceType.AroundAdvice;
+    }
+    public boolean isSuffix(){
+        return adviceType != AdviceType.BeforeAdvice;
+    }
     private Method adviceMethod;
 
 
@@ -155,9 +198,14 @@ public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
         this.aspectName = bd.getName();
         this.adviceMethod = m;
         this.adviceType = adviceType;
-        optionalOrder.ifPresent(order -> {
-            this.order = order.value();
-        });
+        Order methodOrder = wrap(m).getAnnotation(Order.class);
+        if (methodOrder != null) {
+            this.order = methodOrder.value();
+        } else {
+            optionalOrder.ifPresent(order -> {
+                this.order = order.value();
+            });
+        }
         Optional.ofNullable(m.getAnnotation(SelectBean.class)).ifPresentOrElse(a -> {
             this.selector = (BeanSelector) BeanUtils.newInstance(a.value());
         }, () -> {

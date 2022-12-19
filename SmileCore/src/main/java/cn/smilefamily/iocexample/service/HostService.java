@@ -17,7 +17,7 @@ public class HostService {
         System.out.println(dataSource);
     }
     public void doSomething(String name, int age, String source){
-        System.out.println("name = " + name + ", age = " + age + ", source = " +source);
+        System.out.println("In normal method: name = " + name + ", age = " + age + ", source = " +source);
     }
 
     @PostConstruct

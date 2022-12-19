@@ -4,6 +4,7 @@ import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.Alias;
 import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.aop.AdvisorDefinition;
+import cn.smilefamily.aop.ComposedAdvisor;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.common.MiscUtils;
 import cn.smilefamily.common.dev.TraceInfo;
@@ -42,7 +43,7 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
     private final List<Dependency> dependencies = new ArrayList<>();
     protected Context context;
 
-    private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
+    private ComposedAdvisor composedAdvisor;
     //Bean名称（在context中的key）
     private String name;
     private List<String> aliases = new ArrayList<>();
@@ -56,6 +57,7 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
     private String description;
 
     private String scope;
+
 
     public String getScope() {
         return scope;
@@ -73,6 +75,8 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
     //此BeanDefinition生成的实例（单例），一个BeanInstance不为空，表示bean实例已经生成，可以作为被依赖相注入到别的Bean。但其功能不一定
     //完备，不一定能对外提供服务（也就上程序员用）
     protected Object beanInstance;
+
+    private Object proxyBeanInstance;
     //在aop的情况下，为真正的bean
     private AtomicReference<Object> targetInstance = new AtomicReference<>();
     //标记bean是否创建（创建但未注入，未初始化，仅可以用于建立依赖）
@@ -230,11 +234,9 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
         @Override
         public void reset() {
         }
-
         @Override
-        public Object getBeanInstance() {
+        protected void doPrepare() {
             initialize();
-            return beanInstance;
         }
     }
 
@@ -242,12 +244,10 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
         private PrototypeBeanDefinition(Context context, String name, Class<?> clazz) {
             super(context, name, clazz);
         }
-
         @Override
-        public Object getBeanInstance() {
+        protected void doPrepare() {
             reset();
             initialize();
-            return beanInstance;
         }
     }
 
@@ -281,9 +281,8 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
         }
 
         @Override
-        public Object getBeanInstance() {
+        protected void doPrepare() {
             initialize();
-            return beanInstance;
         }
 
         private Object createScopedProxy() {
@@ -366,73 +365,39 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
         }
         debugStack.removeLast();
     }
+    @Override
+    public Object getBeanInstance(){
+        doPrepare();
+        if(proxyBeanInstance != null){
+            return proxyBeanInstance;
+        }
+        return beanInstance;
+    }
+
+    protected abstract void doPrepare();
 
     /**
      * 为aop做准备工作
      */
     @Override
     public void preInitialize() {
-        advisorDefinitions.addAll(this.context.getAdvisorDefinitions().stream().filter(a -> a.accept(this)).toList());
-        Collections.sort(advisorDefinitions);
-        if (advisorDefinitions.isEmpty()) {
+        composedAdvisor = new ComposedAdvisor(this.context.getAdvisorDefinitions().stream().filter(a -> a.accept(this)).toList());
+        if(composedAdvisor.isEmpty()){
             return;
         }
         ProxyFactory factory = new ProxyFactory();
         factory.setSuperclass(getType());
         //factory.writeDirectory="./code";
-        Object proxyBean = BeanUtils.newInstance(factory.createClass());
-        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
+        proxyBeanInstance = BeanUtils.newInstance(factory.createClass());
+        ((Proxy) proxyBeanInstance).setHandler((self, m, proceed, args) -> {
             logger.debug("intercept " + m.getName() + "@" + getName() + "@" + getScope());
-            Object target = targetInstance.updateAndGet(old -> {
-                if (old == null) {
-                    return targetFactory.get();
-                }
-                return old;
-            });
-            AdvisorDefinition targetAdvisorDefinition = null;
-            for (AdvisorDefinition advisorDefinition : advisorDefinitions) {
-                if (advisorDefinition.match(m)) {
-                    if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.BeforeAdvice) {
-                        advisorDefinition.invokeAdvice(this, target, self, m, args, null, null);
-                        continue;
-                    }
-                    if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AroundAdvice) {
-                        targetAdvisorDefinition = advisorDefinition;
-                        break;
-                    }
-                }
+            if(!composedAdvisor.match(m)){
+                return m.invoke(beanInstance, args);
             }
-            Object result = null;
-            try {
-                if (targetAdvisorDefinition != null) {
-                    result = targetAdvisorDefinition.invokeAdvice(this, target, self, m, args, null, null);
-                } else {
-                    result = m.invoke(target, args);
-                }
-                for (int i = advisorDefinitions.size() - 1; i >= 0; i--) {
-                    AdvisorDefinition advisorDefinition = advisorDefinitions.get(i);
-                    if (advisorDefinition.match(m)) {
-                        if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterAdvice
-                                || advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterReturningAdvice) {
-                            advisorDefinition.invokeAdvice(this, target, self, m, args, result, null);
-                        }
-                    }
-                }
-            } catch (Throwable t) {
-                for (int i = advisorDefinitions.size() - 1; i >= 0; i--) {
-                    AdvisorDefinition advisorDefinition = advisorDefinitions.get(i);
-                    if (advisorDefinition.match(m)) {
-                        if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterAdvice
-                                || advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterThrowingAdvice) {
-                            advisorDefinition.invokeAdvice(this, target, self, m, args, result, t);
-                        }
-                    }
-                }
-            }
-            return result;
+            return composedAdvisor.execute(this,beanInstance, self, proceed, m, args);
         });
-        this.targetFactory = this.factory;
-        this.factory = () -> proxyBean;
+        //this.targetFactory = this.factory;
+        //this.factory = () -> proxyBean;
     }
 
     public void reset() {

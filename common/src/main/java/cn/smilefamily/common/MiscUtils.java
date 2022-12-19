@@ -65,5 +65,7 @@ public class MiscUtils {
         System.out.println(shortName("xx.xx.last"));
         System.out.println(shortName("xx.last"));
         System.out.println(shortName("last"));
+        Integer a =null;
+        int ab = a;
     }
 }
