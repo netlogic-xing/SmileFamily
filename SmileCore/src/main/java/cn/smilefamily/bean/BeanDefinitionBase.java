@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,7 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
 
     //用于生成Bean实例的工厂函数
     protected Supplier<?> factory;
+    private Supplier<?> targetFactory;
     //所有标注为@Injected@Value的field
     private Map<Field, Dependency> fieldDependencies = new HashMap<>();
     //所有标注为@Autowired的方法
@@ -71,6 +73,8 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
     //此BeanDefinition生成的实例（单例），一个BeanInstance不为空，表示bean实例已经生成，可以作为被依赖相注入到别的Bean。但其功能不一定
     //完备，不一定能对外提供服务（也就上程序员用）
     protected Object beanInstance;
+    //在aop的情况下，为真正的bean
+    private AtomicReference<Object> targetInstance = new AtomicReference<>();
     //标记bean是否创建（创建但未注入，未初始化，仅可以用于建立依赖）
     private boolean beanCreated;
 
@@ -369,6 +373,66 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
     @Override
     public void preInitialize() {
         advisorDefinitions.addAll(this.context.getAdvisorDefinitions().stream().filter(a -> a.accept(this)).toList());
+        Collections.sort(advisorDefinitions);
+        if (advisorDefinitions.isEmpty()) {
+            return;
+        }
+        ProxyFactory factory = new ProxyFactory();
+        factory.setSuperclass(getType());
+        //factory.writeDirectory="./code";
+        Object proxyBean = BeanUtils.newInstance(factory.createClass());
+        ((Proxy) proxyBean).setHandler((self, m, proceed, args) -> {
+            logger.debug("intercept " + m.getName() + "@" + getName() + "@" + getScope());
+            Object target = targetInstance.updateAndGet(old -> {
+                if (old == null) {
+                    return targetFactory.get();
+                }
+                return old;
+            });
+            AdvisorDefinition targetAdvisorDefinition = null;
+            for (AdvisorDefinition advisorDefinition : advisorDefinitions) {
+                if (advisorDefinition.match(m)) {
+                    if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.BeforeAdvice) {
+                        advisorDefinition.invokeAdvice(this, target, self, m, args, null, null);
+                        continue;
+                    }
+                    if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AroundAdvice) {
+                        targetAdvisorDefinition = advisorDefinition;
+                        break;
+                    }
+                }
+            }
+            Object result = null;
+            try {
+                if (targetAdvisorDefinition != null) {
+                    result = targetAdvisorDefinition.invokeAdvice(this, target, self, m, args, null, null);
+                } else {
+                    result = m.invoke(target, args);
+                }
+                for (int i = advisorDefinitions.size() - 1; i >= 0; i--) {
+                    AdvisorDefinition advisorDefinition = advisorDefinitions.get(i);
+                    if (advisorDefinition.match(m)) {
+                        if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterAdvice
+                                || advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterReturningAdvice) {
+                            advisorDefinition.invokeAdvice(this, target, self, m, args, result, null);
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                for (int i = advisorDefinitions.size() - 1; i >= 0; i--) {
+                    AdvisorDefinition advisorDefinition = advisorDefinitions.get(i);
+                    if (advisorDefinition.match(m)) {
+                        if (advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterAdvice
+                                || advisorDefinition.getAdviceType() == AdvisorDefinition.AdviceType.AfterThrowingAdvice) {
+                            advisorDefinition.invokeAdvice(this, target, self, m, args, result, t);
+                        }
+                    }
+                }
+            }
+            return result;
+        });
+        this.targetFactory = this.factory;
+        this.factory = () -> proxyBean;
     }
 
     public void reset() {

@@ -282,6 +282,9 @@ public class BeanContext implements Context, ContextScopeSupportable {
         yamlContextInitExecutor.execute();
         configBeanFactory.build();
         beanDefinitions.values().forEach(bd -> {
+            bd.preInitialize();
+        });
+        beanDefinitions.values().forEach(bd -> {
             bd.initialize();
         });
         initialized = true;
@@ -409,8 +412,9 @@ public class BeanContext implements Context, ContextScopeSupportable {
             //扫描指定包，处理标注为@Aspect的class
             ScanAspect[] scanAspects = wrap(configClass).getAnnotationsByType(ScanAspect.class);
             Arrays.stream(scanAspects).map(p -> scanPackage(p.value(), Aspect.class, c -> {
-                        advisorDefinitions.addAll(AdvisorDefinition.buildFrom(c));
-                        return BeanDefinitionBase.create(this, "scan " + p + " by " + configClass.getName(), c);
+                        BeanDefinitionBase bd = BeanDefinitionBase.create(this, "scan " + p + " by " + configClass.getName(), c);
+                        advisorDefinitions.addAll(AdvisorDefinition.buildFrom(c, bd));
+                        return bd;
                     }))
                     .forEach(bds -> {
                         addBeanDefinitions(bds);

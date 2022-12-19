@@ -1,5 +1,6 @@
 package cn.smilefamily.iocexample;
 
+import cn.smilefamily.annotation.aop.ScanAspect;
 import cn.smilefamily.annotation.core.*;
 import cn.smilefamily.iocexample.external.DataSource;
 import cn.smilefamily.iocexample.external.Driver;
@@ -8,9 +9,9 @@ import cn.smilefamily.iocexample.external.Driver;
 @ScanPackage("cn.smilefamily.iocexample.model")
 @ScanPackage("cn.smilefamily.iocexample.service")
 @ScanPackage("cn.smilefamily.iocexample.external")
+@ScanAspect("cn.smilefamily.iocexample.external.advice")
 @PropertySource("classpath:application.properties")
 @PropertySource("classpath:application.yml")
-
 public class AppConfig {
 
     @Bean

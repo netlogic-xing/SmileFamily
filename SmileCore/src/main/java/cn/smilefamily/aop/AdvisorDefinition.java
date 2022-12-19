@@ -2,23 +2,29 @@ package cn.smilefamily.aop;
 
 import cn.smilefamily.annotation.aop.*;
 import cn.smilefamily.bean.BeanDefinition;
+import cn.smilefamily.bean.BeanDefinitionBase;
+import cn.smilefamily.common.MiscUtils;
 import cn.smilefamily.util.BeanUtils;
+import com.google.common.base.Strings;
 import org.reflections.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.*;
 
 import static cn.smilefamily.annotation.EnhancedAnnotatedElement.wrap;
 import static org.reflections.util.ReflectionUtilsPredicates.withAnnotation;
 
-public class AdvisorDefinition implements Comparator<AdvisorDefinition> {
+public class AdvisorDefinition implements Comparable<AdvisorDefinition> {
+
+
     @Override
-    public int compare(AdvisorDefinition o1, AdvisorDefinition o2) {
-        return o1.order - o2.order;
+    public int compareTo(AdvisorDefinition o) {
+        return this.order - o.order;
     }
 
-    private enum AdviceType {
+    public enum AdviceType {
         BeforeAdvice(Before.class),
         AfterAdvice(After.class),
         AfterReturningAdvice(AfterReturning.class),
@@ -30,7 +36,94 @@ public class AdvisorDefinition implements Comparator<AdvisorDefinition> {
             this.annotation = annotation;
         }
     }
+
+    public Object invokeAdvice(BeanDefinition bd, Object target, Object self, Method targetMethod, Object[] callArgs, Object result, Throwable e) {
+        return MiscUtils.invoke(adviceMethod, aspectBeanDefinition.getBeanInstance(), constructArgs(bd, target, self, targetMethod, callArgs, result, e));
+    }
+
+    public Object[] constructArgs(BeanDefinition bd, Object target, Object self, Method targetMethod, Object[] callArgs, Object result, Throwable e) {
+        Parameter[] parameters = adviceMethod.getParameters();
+        Object[] arguments = new Object[parameters.length];
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter param = parameters[i];
+            if (param.isAnnotationPresent(Return.class)) {
+                arguments[i] = result;
+                continue;
+            }
+            if (param.isAnnotationPresent(Throw.class)) {
+                arguments[i] = e;
+            }
+            if (param.isAnnotationPresent(BeanName.class)) {
+                arguments[i] = bd.getName();
+            }
+            if (param.isAnnotationPresent(This.class)) {
+                arguments[i] = self;
+                continue;
+            }
+            if (param.isAnnotationPresent(TargetObject.class)) {
+                arguments[i] = target;
+                continue;
+            }
+            if (param.isAnnotationPresent(cn.smilefamily.annotation.aop.Method.class)) {
+                arguments[i] = targetMethod;
+                continue;
+            }
+            if (param.isAnnotationPresent(Args.class)) {
+                arguments[i] = callArgs;
+                continue;
+            }
+            Parameter[] targetParams = targetMethod.getParameters();
+            if (param.isAnnotationPresent(Arg.class)) {
+                Arg arg = wrap(param).getAnnotation(Arg.class);
+                String argName = arg.name();
+                if (Strings.isNullOrEmpty(argName)) {
+                    argName = param.isNamePresent() ? param.getName() : null;
+                }
+                if (argName != null) {
+                    int index = getArgIndex(targetParams, argName);
+                    if (index != -1) {
+                        arguments[i] = callArgs[index];
+                        continue;
+                    }
+                }
+                int index = arg.index() == -1 ? i : arg.index();
+                if (index >= callArgs.length) {
+                    throw new AspectInjectException("Arg(index=" + index + ") out of the bound of " + targetMethod.getName());
+                }
+                arguments[i] = callArgs[index];
+                continue;
+            }
+            if (param.isNamePresent()) {
+                int index = getArgIndex(targetParams, param.getName());
+                if (index != -1) {
+                    arguments[i] = callArgs[index];
+                    continue;
+                }
+            }
+            if (i >= callArgs.length) {
+                throw new AspectInjectException("Arg(index=" + i + ") out of the bound of " + targetMethod.getName());
+            }
+            arguments[i] = callArgs[i];
+        }
+        return arguments;
+    }
+
+    private int getArgIndex(Parameter[] targetParams, String argName) {
+        for (int j = 0; j < targetParams.length; j++) {
+            if (targetParams[j].isNamePresent() && targetParams[j].getName().equals(argName)) {
+                return j;
+            }
+        }
+        return -1;
+    }
+
+    public AdviceType getAdviceType() {
+        return adviceType;
+    }
+
     private Method adviceMethod;
+
+
     private AdviceType adviceType;
 
     private String aspectName;
@@ -47,18 +140,21 @@ public class AdvisorDefinition implements Comparator<AdvisorDefinition> {
     private BeanSelector selector;
     private MethodFilter filter;
 
-    public static List<AdvisorDefinition> buildFrom(Class<?> aspectClass) {
+    private BeanDefinition aspectBeanDefinition;
+
+    public static List<AdvisorDefinition> buildFrom(Class<?> aspectClass, BeanDefinitionBase bd) {
         Optional<Order> optionalOrder = Optional.ofNullable(wrap(aspectClass).getAnnotation(Order.class));
         return Arrays.stream(AdviceType.values())
-                .map(adviceType -> getAdvisorDefinitions(aspectClass, optionalOrder, adviceType))
+                .map(adviceType -> getAdvisorDefinitions(aspectClass, optionalOrder, adviceType, bd))
                 .flatMap(Collection::stream)
                 .toList();
     }
 
-    private AdvisorDefinition(Optional<Order> optionalOrder, AdviceType adviceType, Method m) {
+    private AdvisorDefinition(Optional<Order> optionalOrder, AdviceType adviceType, Method m, BeanDefinitionBase bd) {
+        this.aspectBeanDefinition = bd;
+        this.aspectName = bd.getName();
         this.adviceMethod = m;
         this.adviceType = adviceType;
-        this.aspectName = m.getDeclaringClass().getName();
         optionalOrder.ifPresent(order -> {
             this.order = order.value();
         });
@@ -113,9 +209,9 @@ public class AdvisorDefinition implements Comparator<AdvisorDefinition> {
         };
     }
 
-    private static List<AdvisorDefinition> getAdvisorDefinitions(Class<?> aspectClass, Optional<Order> optionalOrder, AdviceType adviceType) {
+    private static List<AdvisorDefinition> getAdvisorDefinitions(Class<?> aspectClass, Optional<Order> optionalOrder, AdviceType adviceType, BeanDefinitionBase bd) {
         return ReflectionUtils.getMethods(aspectClass, withAnnotation(adviceType.annotation)).stream()
-                .map(m -> new AdvisorDefinition(optionalOrder, adviceType, m))
+                .map(m -> new AdvisorDefinition(optionalOrder, adviceType, m, bd))
                 .toList();
     }
 
@@ -140,10 +236,10 @@ public class AdvisorDefinition implements Comparator<AdvisorDefinition> {
     }
 
     public boolean accept(BeanDefinition beanDefinition) {
-        return true;
+        return selector.match(beanDefinition.getName(), beanDefinition.getType());
     }
 
     public boolean match(Method method) {
-        return true;
+        return filter.include(method);
     }
 }

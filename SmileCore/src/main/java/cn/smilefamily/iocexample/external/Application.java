@@ -11,8 +11,9 @@ public class Application {
        // SmileUtils.inspectConfig(AppConfig.class);
         Context bc = new BeanContext(AppConfig.class);
         bc.build();
-        HostService service = (HostService) bc.getBean(HostService.class);
+        HostService service = bc.getBean(HostService.class);
         service.doAction();
+        service.doSomething("xinglu", 7, "home");
         AspectBean aspectBean = new AspectBean("xing");
         aspectBean.show();
     }

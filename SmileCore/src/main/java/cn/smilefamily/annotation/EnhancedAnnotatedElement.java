@@ -6,10 +6,11 @@ import javassist.util.proxy.ProxyFactory;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.util.Optional;
+import java.util.Arrays;
 
 public class EnhancedAnnotatedElement implements AnnotatedElement {
     private AnnotatedElement target;
+
     public static EnhancedAnnotatedElement wrap(AnnotatedElement target) {
         return new EnhancedAnnotatedElement(target);
     }
@@ -25,7 +26,7 @@ public class EnhancedAnnotatedElement implements AnnotatedElement {
         //factory.setFilter(m->m.isAnnotationPresent(AliasFor.class));
         Object proxy = BeanUtils.newInstance(factory.createClass());
         ((Proxy) proxy).setHandler((self, m, proceed, args) -> {
-            if(!m.isAnnotationPresent(AliasFor.class)){
+            if (!m.isAnnotationPresent(AliasFor.class)) {
                 return m.invoke(target, args);
             }
             Object result = m.invoke(target, args);
@@ -52,13 +53,14 @@ public class EnhancedAnnotatedElement implements AnnotatedElement {
         }
         return null;
     }
+
     @Override
     public Annotation[] getAnnotations() {
-        return target.getAnnotations();
+        return Arrays.stream(target.getAnnotations()).map(a -> proxy(a.annotationType(), a)).toList().toArray(new Annotation[0]);
     }
 
     @Override
     public Annotation[] getDeclaredAnnotations() {
-        return target.getDeclaredAnnotations();
+        return Arrays.stream(target.getDeclaredAnnotations()).map(a -> proxy(a.annotationType(), a)).toList().toArray(new Annotation[0]);
     }
 }
