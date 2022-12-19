@@ -29,9 +29,9 @@ Smile家族包括:
 # Todo List
 
 - [ ] 事件的支持
-- [ ] 模块化支持
+- [x] 模块化支持
     - [x] Bean的导入导出
-    - [ ] 模块的封装形式
+    - [x] 模块的封装形式
 - [x] @AliasFor的支持
 - [x] Annotation"继承"的支持
 - [x] Bean别名的支持

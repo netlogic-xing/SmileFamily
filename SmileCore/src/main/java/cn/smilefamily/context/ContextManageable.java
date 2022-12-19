@@ -15,7 +15,12 @@ public interface ContextManageable {
 
     void importBeanDefinitions(List<BeanDefinition> bds);
 
+    void prepare();
     void build();
 
     Context getContext();
+
+    default void destroy() {
+
+    }
 }

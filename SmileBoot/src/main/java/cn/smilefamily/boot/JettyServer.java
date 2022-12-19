@@ -30,9 +30,6 @@ public class JettyServer {
         server.setHandler(servletHandler);
         server.start();
     }
-    public void setApplicationContent(BeanFactory beanContext){
-        servletHandler.getServletContext().setAttribute(BeanContext.class.getName(), beanContext);
-    }
     public void addEventListener(EventListener listener) {
         servletHandler.addEventListener(listener);
     }

@@ -1,5 +1,6 @@
 package cn.smilefamily.iocexample.external;
 
+import cn.smilefamily.context.ApplicationManager;
 import cn.smilefamily.context.BeanContext;
 import cn.smilefamily.context.Context;
 import cn.smilefamily.iocexample.AppConfig;
@@ -10,6 +11,7 @@ public class Application {
     public static void main(String[] args) {
        // SmileUtils.inspectConfig(AppConfig.class);
         Context bc = new BeanContext(AppConfig.class);
+        ApplicationManager.getInstance().setRootContext(bc);
         bc.build();
         HostService service = bc.getBean(HostService.class);
         service.doAction();

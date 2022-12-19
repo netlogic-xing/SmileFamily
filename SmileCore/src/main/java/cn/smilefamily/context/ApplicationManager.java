@@ -15,6 +15,7 @@ public class ApplicationManager {
     private static final Logger logger = getLogger(ApplicationManager.class);
     private static ApplicationManager instance = new ApplicationManager();
     private boolean initialized = false;
+    private boolean prepared = false;
 
     private AtomicReference<ContextManageable> rootContext = new AtomicReference<>();
 
@@ -33,7 +34,7 @@ public class ApplicationManager {
         child.setParent(rootContext.get().getContext());
         rootContext.get().importBeanDefinitions(child.export());
         if (old != null) {
-            logger.info("BeanContext " + child.getName() + " is replaced.");
+            logger.info("Context " + child.getName() + " is replaced.");
         }
     }
 
@@ -58,11 +59,24 @@ public class ApplicationManager {
         if (initialized) {
             return;
         }
+        if (!prepared) {
+            prepare();
+        }
         this.rootContext.get().build();
         children.values().forEach(context -> {
             context.build();
         });
         initialized = true;
+    }
+
+    public void prepare() {
+        if (prepared) {
+            return;
+        }
+        this.rootContext.get().prepare();
+        children.values().forEach(context -> {
+            context.prepare();
+        });
     }
 
     public static ApplicationManager getInstance() {

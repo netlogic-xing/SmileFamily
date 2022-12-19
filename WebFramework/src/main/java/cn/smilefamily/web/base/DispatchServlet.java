@@ -1,5 +1,6 @@
 package cn.smilefamily.web.base;
 
+import cn.smilefamily.context.ApplicationManager;
 import cn.smilefamily.context.BeanContext;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
@@ -86,14 +87,13 @@ public class DispatchServlet extends HttpServlet {
         }
         Class<?> webConfigClass = classes.stream().findFirst().orElseThrow(() -> new WebConfigNotFoundException("No class annotated by @WebConfiguration Found!"));
         log("Using web config class: " + webConfigClass.getName());
-        beanContext = new BeanContext(webConfigClass, (BeanContext) this.getServletContext().getAttribute(BeanContext.class.getName()));
+
+        beanContext = new BeanContext(webConfigClass,ApplicationManager.getInstance().getRootContext());
+        ApplicationManager.getInstance().addContext(beanContext);
         //直接注入servletConfig和servletContext
         beanContext.addBean(ServletConfig.class.getName(), this.getServletConfig(), "servlet init");
         beanContext.addBean(ServletContext.class.getName(), this.getServletContext(), "servlet init");
         beanContext.build();
-        //把BeanContext放到静态类方便后续方法中使用
-        BeanContextHolder.setContext(beanContext);
-
         controllerMethods = HashBasedTable.create();
         List<?> controllers = beanContext.getBeansByAnnotation(Controller.class);
         controllers.stream().forEach(controller -> {

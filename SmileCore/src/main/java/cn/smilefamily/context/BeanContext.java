@@ -70,12 +70,13 @@ public class BeanContext implements Context, ContextScopeSupportable {
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
     private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainers = new ThreadLocal<>();
     private boolean initialized;
+    private boolean prepared;
 
     public BeanContext(Class<?> configClass) {
         this(configClass, null, null);
     }
 
-    public BeanContext(Class<?> configClass, BeanContext parent) {
+    public BeanContext(Class<?> configClass, Context parent) {
         this(configClass, parent, null);
     }
 
@@ -129,6 +130,8 @@ public class BeanContext implements Context, ContextScopeSupportable {
         addBeanDefinitions(bds);
     }
 
+
+
     public List<BeanDefinition> getBeanDefinitions() {
         return beanDefinitions.values().stream().toList();
     }
@@ -139,7 +142,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
     }
 
     @Trace
-    public BeanContext(Class<?> configClass, BeanContext parent, String initPropertiesFile) {
+    public BeanContext(Class<?> configClass, Context parent, String initPropertiesFile) {
         //加载扩展
         ExtensionManager.loadExtensions();
         yamlContextInitExecutor = new DelayedTaskExecutor("yamlContextInitExecutor", () -> readyToInitYamlContext);
@@ -149,6 +152,8 @@ public class BeanContext implements Context, ContextScopeSupportable {
             Configuration configuration = wrap(configClass).getAnnotation(Configuration.class);
             if (configuration != null && !configuration.value().equals("")) {
                 name = configuration.value();
+            }else{
+                name = configClass.getName();
             }
         }
         this.environment = new PropertiesContext(this);
@@ -161,7 +166,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
             // Add bean defined within the config class
             buildBeanDefinitionsFromConfigClass(configClass);
 
-            ApplicationManager.getInstance().addContext(this);
+            //ApplicationManager.getInstance().addContext(this);
         }
         this.environment.initialize();
     }
@@ -277,6 +282,19 @@ public class BeanContext implements Context, ContextScopeSupportable {
         if (initialized) {
             return;
         }
+        if(!prepared){
+            prepare();
+        }
+        beanDefinitions.values().forEach(bd -> {
+            bd.initialize();
+        });
+        initialized = true;
+    }
+    @Override
+    public void prepare() {
+        if(prepared){
+            return;
+        }
         environment.build();
         readyToInitYamlContext = true;
         yamlContextInitExecutor.execute();
@@ -284,12 +302,8 @@ public class BeanContext implements Context, ContextScopeSupportable {
         beanDefinitions.values().forEach(bd -> {
             bd.preInitialize();
         });
-        beanDefinitions.values().forEach(bd -> {
-            bd.initialize();
-        });
-        initialized = true;
+        prepared = true;
     }
-
     @Override
     public Context getContext() {
         return this;

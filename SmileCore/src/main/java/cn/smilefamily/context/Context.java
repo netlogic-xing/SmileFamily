@@ -73,13 +73,15 @@ public interface Context extends ContextManageable, BeanFactory {
         putBean(name, bean.getClass(), () -> bean, "add by user@" + new Date());
     }
 
-    public default Object inject(Object bean) {
+    public default <T> T inject(T bean) {
         BeanDefinition bd = BeanDefinitionBase.create(this, bean);
-        return bd.getBeanInstance();
+        bd.preInitialize();
+        return (T) bd.getBeanInstance();
     }
 
-    public default Object create(Class<?> clazz) {
+    public default <T> T create(Class<T> clazz) {
         BeanDefinition bd = BeanDefinitionBase.create(this, "free-bean add by user", clazz);
-        return bd.getBeanInstance();
+        bd.preInitialize();
+        return (T) bd.getBeanInstance();
     }
 }

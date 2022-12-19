@@ -27,7 +27,6 @@ public class WebApplication extends Application {
     public WebApplication() {
         jettyServer = new JettyServer();
         this.getApplicationContext().addBeanAndInjectDependencies(jettyServer, "web server start");
-        jettyServer.setApplicationContent(this.getApplicationContext());
         jettyServer.register("/*", DispatchServlet.class);
         jettyServer.addEventListener(new ServletRequestListener() {
             @Override
