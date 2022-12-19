@@ -36,7 +36,7 @@ Smile家族包括:
 - [x] Annotation"继承"的支持
 - [x] Bean别名的支持
 - [ ] Schedule的支持
-- [ ] 拦截器/装饰器的支持
+- [x] AOP的支持
 - [x] yml/json配置支持
 - [x] profile的支持 
 - [ ] 重新抽象接口，稳定接口
