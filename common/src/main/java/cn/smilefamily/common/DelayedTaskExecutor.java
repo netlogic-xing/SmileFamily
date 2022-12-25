@@ -32,27 +32,27 @@ public class DelayedTaskExecutor {
         this.name = name;
     }
 
-    public void addFirst(String taskName, Runnable task) {
+    public void enqueue(String taskName, Runnable task) {
         Task t = new Task(taskName, task);
         if (queue.contains(t)) {
             return;
         }
-        queue.addFirst(t);
+        queue.add(t);
     }
 
-    public void addLast(String taskName, Runnable task) {
+    public void jumpqueue(String taskName, Runnable task) {
         Task t = new Task(taskName, task);
         if (queue.contains(t)) {
             return;
         }
         queue.addLast(new Task(taskName, task));
     }
-    //加入队头，意味着先执行
-    public void addFirst(Runnable task) {
-        queue.addFirst(new Task(task));
+    //加入队尾,后执行
+    public void enqueue(Runnable task) {
+        queue.add(new Task(task));
     }
-    //加入队尾，意味着后执行
-    public void addLast(Runnable task) {
+    //加入队头，意味着先执行
+    public void jumpqueue(Runnable task) {
         queue.addLast(new Task(task));
     }
 
@@ -61,18 +61,18 @@ public class DelayedTaskExecutor {
     }
 
     /**
-     * 从队列尾部开始执行整个队列
+     * 从队列头部开始执行整个队列
      */
     public void execute() {
         Task task = null;
-        while ((task = queue.pollLast()) != null) {
+        while ((task = queue.poll()) != null) {
             task.runnable().run();
         }
     }
 
     @Aspect
     private static class Trigger {
-        @AfterReturning("execution(public void add*(..))&&target(executor)&&within(DelayedTaskExecutor)")
+        @AfterReturning("execution(public void *queue(..))&&target(executor)&&within(DelayedTaskExecutor)")
         public void trigger(DelayedTaskExecutor executor) {
             if (executor.executionCondition.met()) {
                 executor.execute();
@@ -105,11 +105,20 @@ public class DelayedTaskExecutor {
             return Objects.hash(name);
         }
     }
-
+    static boolean test;
     public static void main(String[] args) {
-        DelayedTaskExecutor delayedTaskExecutor = new DelayedTaskExecutor("test", () -> true);
-        delayedTaskExecutor.addFirst(() -> {
-            System.out.println("test...");
+
+        DelayedTaskExecutor delayedTaskExecutor = new DelayedTaskExecutor("test", () -> test);
+        delayedTaskExecutor.enqueue(() -> {
+            System.out.println("test...1");
         });
+        delayedTaskExecutor.enqueue(() -> {
+            System.out.println("test...2");
+        });
+        delayedTaskExecutor.enqueue(() -> {
+            System.out.println("test...3");
+        });
+        test=true;
+        delayedTaskExecutor.execute();
     }
 }

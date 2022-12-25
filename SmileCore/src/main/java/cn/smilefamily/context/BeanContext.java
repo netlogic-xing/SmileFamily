@@ -3,8 +3,8 @@ package cn.smilefamily.context;
 import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.AnnotationRegistry;
 import cn.smilefamily.annotation.aop.Aspect;
-import cn.smilefamily.annotation.aop.ScanAspect;
 import cn.smilefamily.annotation.core.*;
+import cn.smilefamily.annotation.event.EventListener;
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.BeanDefinitionBase;
@@ -12,6 +12,7 @@ import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.common.dev.Trace;
 import cn.smilefamily.common.dev.TraceInfo;
 import cn.smilefamily.common.dev.TraceParam;
+import cn.smilefamily.event.*;
 import cn.smilefamily.extension.ExtensionManager;
 import cn.smilefamily.util.BeanUtils;
 import cn.smilefamily.util.FileUtils;
@@ -24,8 +25,10 @@ import org.slf4j.LoggerFactory;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -37,11 +40,23 @@ import static cn.smilefamily.common.MiscUtils.shortName;
  */
 public class BeanContext implements Context, ContextScopeSupportable {
     private static final Logger logger = LoggerFactory.getLogger(BeanContext.class);
+    public static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
+    /**
+     * 如要更改Smile自身事件传播器，应该通过此名字定义.
+     * 注意：使用自定义事件传播器要特别小心，parent的自定义事件传播器会被其子context继承。但默认的事件传播器不会。
+     * 所以，如果想要用整个体系用用一个传播器则其应该定义为singleton bean，如果要各个context用自己的，则要定义为
+     * prototype bean
+     */
+    public static String CUSTOMIZED_EVENT_MULTICASTER_NAME = "smile.customized.event.multicaster.name";
+    //为方便测试，把对一些静态方法的依赖封装到help类
+    private static BeanContextHelper helper = new BeanContextHelper();
     /**
      * context唯一标识，用于多个context管理
      */
     private String name = "root";
-    public static String SCOPED_BEAN_CONTAINER_PREFIX = "smile.scoped.bean.container:";
+    private ConcurrentMap<String, EventChannel<?>> channels = new ConcurrentHashMap<>();
+    private boolean applicationEventMulticasterReady = false;
+    private DelayedTaskExecutor delayedEvenListenerAddingExecutor = new DelayedTaskExecutor(() -> applicationEventMulticasterReady);
     /**
      * parent环境，查找bean时如果在自身没找到，就到parent找。
      */
@@ -54,20 +69,11 @@ public class BeanContext implements Context, ContextScopeSupportable {
 
     private boolean readyToInitYamlContext;
     private String profile;
-
-    //此方法仅仅用于测试，正常使用不应该设置helper
-    public static void setHelper(BeanContextHelper helper) {
-        BeanContext.helper = helper;
-    }
-
-    //为方便测试，把对一些静态方法的依赖封装到help类
-    private static BeanContextHelper helper = new BeanContextHelper();
     /**
      * All beans defined here
      */
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
-
-    private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
+    private Set<AdvisorDefinition> advisorDefinitions = new HashSet<>();
     private ThreadLocal<Map<String, ConcurrentMap<BeanDefinition, Object>>> threadLocalScopedBeanContainers = new ThreadLocal<>();
     private boolean initialized;
     private boolean prepared;
@@ -86,6 +92,58 @@ public class BeanContext implements Context, ContextScopeSupportable {
 
     public BeanContext(String initProperties) {
         this(null, null, initProperties);
+    }
+
+    @Trace
+    public BeanContext(Class<?> configClass, Context parent, String initPropertiesFile) {
+        //加载扩展
+        ExtensionManager.loadExtensions();
+        yamlContextInitExecutor = new DelayedTaskExecutor("yamlContextInitExecutor", () -> readyToInitYamlContext);
+        this.parent = parent;
+        if (configClass != null) {
+            //尽早获得config的name，因为解析properties和yml要用
+            Configuration configuration = wrap(configClass).getAnnotation(Configuration.class);
+            if (configuration != null && !configuration.value().equals("")) {
+                name = configuration.value();
+            } else {
+                name = configClass.getName();
+            }
+        }
+        this.environment = new PropertiesContext(this);
+        this.configBeanFactory = new YamlContext(this);
+        if (!Strings.isNullOrEmpty(initPropertiesFile)) {
+            processConfigFile(initPropertiesFile);
+        }
+
+        if (configClass != null) {
+            // Add bean defined within the config class
+            buildBeanDefinitionsFromConfigClass(configClass);
+
+            //ApplicationManager.getInstance().addContext(this);
+        }
+        this.environment.initialize();
+    }
+
+    //此方法仅仅用于测试，正常使用不应该设置helper
+    public static void setHelper(BeanContextHelper helper) {
+        BeanContext.helper = helper;
+    }
+
+    private void initEventMulticaster() {
+        channel(ContextEvent.class, "");
+        applicationEventMulticasterReady = true;
+        delayedEvenListenerAddingExecutor.execute();
+    }
+
+    private ApplicationEventMulticaster findEventMulticaster(Class<?> eventClass, String channel) {
+        ApplicationEventMulticaster multicaster = getBean(channel);
+        if (multicaster == null) {
+            multicaster = getBean(CUSTOMIZED_EVENT_MULTICASTER_NAME);
+        }
+        if (multicaster == null) {
+            multicaster = new ContextEventMulticaster<>(eventClass, this);
+        }
+        return multicaster;
     }
 
     @Override
@@ -130,7 +188,15 @@ public class BeanContext implements Context, ContextScopeSupportable {
         addBeanDefinitions(bds);
     }
 
+    @Override
+    public boolean isPrepared() {
+        return prepared;
+    }
 
+    @Override
+    public boolean isInitialized() {
+        return initialized;
+    }
 
     public List<BeanDefinition> getBeanDefinitions() {
         return beanDefinitions.values().stream().toList();
@@ -139,36 +205,6 @@ public class BeanContext implements Context, ContextScopeSupportable {
     @TraceInfo
     public String traceInfo() {
         return shortName(this.getClass().getName()) + "<" + name + ">";
-    }
-
-    @Trace
-    public BeanContext(Class<?> configClass, Context parent, String initPropertiesFile) {
-        //加载扩展
-        ExtensionManager.loadExtensions();
-        yamlContextInitExecutor = new DelayedTaskExecutor("yamlContextInitExecutor", () -> readyToInitYamlContext);
-        this.parent = parent;
-        if (configClass != null) {
-            //尽早获得config的name，因为解析properties和yml要用
-            Configuration configuration = wrap(configClass).getAnnotation(Configuration.class);
-            if (configuration != null && !configuration.value().equals("")) {
-                name = configuration.value();
-            }else{
-                name = configClass.getName();
-            }
-        }
-        this.environment = new PropertiesContext(this);
-        this.configBeanFactory = new YamlContext(this);
-        if (!Strings.isNullOrEmpty(initPropertiesFile)) {
-            processConfigFile(initPropertiesFile);
-        }
-
-        if (configClass != null) {
-            // Add bean defined within the config class
-            buildBeanDefinitionsFromConfigClass(configClass);
-
-            //ApplicationManager.getInstance().addContext(this);
-        }
-        this.environment.initialize();
     }
 
     @Override
@@ -272,7 +308,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
 
     @Override
     public List<AdvisorDefinition> getAdvisorDefinitions() {
-        return advisorDefinitions;
+        return advisorDefinitions.stream().toList();
     }
 
 
@@ -282,17 +318,28 @@ public class BeanContext implements Context, ContextScopeSupportable {
         if (initialized) {
             return;
         }
-        if(!prepared){
+        if (!prepared) {
             prepare();
         }
         beanDefinitions.values().forEach(bd -> {
             bd.initialize();
         });
         initialized = true;
+        multicastEvent(new ContextReadyEvent(this));
     }
+
+    @Override
+    public ApplicationEventMulticaster getApplicationEventMulticaster() {
+        return (ApplicationEventMulticaster) channel(ContextEvent.class, "");
+    }
+
+    /**
+     * 调用BeanDefinition的preInitialize方法，目的是设置aop，对于单个context，可直接调用build，在多个context的情况下，要先调用
+     * prepare，以便跨context的依赖可以被正确设置（aop生效）
+     */
     @Override
     public void prepare() {
-        if(prepared){
+        if (prepared) {
             return;
         }
         environment.build();
@@ -303,10 +350,31 @@ public class BeanContext implements Context, ContextScopeSupportable {
             bd.preInitialize();
         });
         prepared = true;
+        initEventMulticaster();
+        multicastEvent(new ContextPreparedEvent(this));
     }
+
+    private void multicastEvent(ContextEvent event) {
+        if (parent != null) {
+            parent.getApplicationEventMulticaster().multicastEvent(event);
+        }
+        getApplicationEventMulticaster().multicastEvent(event);
+    }
+
+    @Override
+    public void removeEventListener(String listenerBeanName) {
+
+    }
+
     @Override
     public Context getContext() {
         return this;
+    }
+
+    @Override
+    public void destroy() {
+        multicastEvent(new ContextPreDestroyEvent(this));
+        multicastEvent(new ContextDestroyedEvent(this));
     }
 
     private <T> List<T> scanPackage(String packageName, Class<? extends Annotation> annClass, Function<Class<?>, T> f) {
@@ -358,7 +426,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
                 return val != null ? val : defaultVal == null ? key : defaultVal;
             });
         });
-        yamlContextInitExecutor.addFirst(() -> {
+        yamlContextInitExecutor.enqueue(() -> {
             BeanUtils.iterateYamlDocs(yamlParser, jsonNode -> {
                 JsonNode profileNode = jsonNode.at(Profile.KEY_PATH);
                 if (profileNode.isMissingNode() || profileNode.asText().equals(getProfile())) {
@@ -366,7 +434,7 @@ public class BeanContext implements Context, ContextScopeSupportable {
                 }
             });
         });
-        yamlContextInitExecutor.addFirst(() -> BeanUtils.closeParser(yamlParser));
+        yamlContextInitExecutor.enqueue(() -> BeanUtils.closeParser(yamlParser));
     }
 
     private void processProperties(String fileURL) {
@@ -382,13 +450,36 @@ public class BeanContext implements Context, ContextScopeSupportable {
     @Trace
     private void addBeanDefinitions(List<? extends BeanDefinition> bds) {
         for (BeanDefinition bd : bds) {
+            if (isAspect(bd)) {
+                advisorDefinitions.addAll(AdvisorDefinition.buildFrom(bd.getType(), bd));
+            }
+            if (isEventListener(bd)) {
+                addEventListener(bd);
+            }
             for (String name : bd.getAliases()) {
                 BeanDefinition old = beanDefinitions.put(name, bd);
                 if (old != null) {
-                    logger.info(bd + " is replaced");
+                    logger.info(bd + " is replaced. It may be scanned more than once.");
                 }
             }
         }
+    }
+
+    private void addEventListener(BeanDefinition bd) {
+        EventListener eventListener = wrap(bd.getType()).getAnnotation(EventListener.class);
+        delayedEvenListenerAddingExecutor.enqueue(() -> {
+            for (ConditionEventListener conditionEventListener : ConditionEventListener.constructs(this, bd.getType(), bd.getName())) {
+                channel(eventListener.type(), eventListener.channel()).addEventListener(conditionEventListener.matcher(), conditionEventListener);
+            }
+        });
+    }
+
+    private boolean isEventListener(BeanDefinition bd) {
+        return wrap(bd.getType()).isAnnotationPresent(EventListener.class);
+    }
+
+    private boolean isAspect(BeanDefinition bd) {
+        return bd.getType().isAnnotationPresent(Aspect.class);
     }
 
     /**
@@ -417,23 +508,11 @@ public class BeanContext implements Context, ContextScopeSupportable {
             });
 
             //扫描指定包，处理标注为@Bean的Class
-            ScanPackage[] scanPackages = wrap(configClass).getAnnotationsByType(ScanPackage.class);
+            ScanBean[] scanPackages = wrap(configClass).getAnnotationsByType(ScanBean.class);
             Arrays.stream(scanPackages).map(p -> buildBeanDefinitionsFromPackage(p.value(), "scan " + p + " by " + configClass.getName()))
                     .forEach(bds -> {
                         addBeanDefinitions(bds);
                     });
-
-            //扫描指定包，处理标注为@Aspect的class
-            ScanAspect[] scanAspects = wrap(configClass).getAnnotationsByType(ScanAspect.class);
-            Arrays.stream(scanAspects).map(p -> scanPackage(p.value(), Aspect.class, c -> {
-                        BeanDefinitionBase bd = BeanDefinitionBase.create(this, "scan " + p + " by " + configClass.getName(), c);
-                        advisorDefinitions.addAll(AdvisorDefinition.buildFrom(c, bd));
-                        return bd;
-                    }))
-                    .forEach(bds -> {
-                        addBeanDefinitions(bds);
-                    });
-
         }
         BeanDefinitionBase configDefinition = BeanDefinitionBase.create(this, source, configClass);
         addBeanDefinition(configDefinition);
@@ -452,6 +531,47 @@ public class BeanContext implements Context, ContextScopeSupportable {
         BeanDefinitionBase bd = BeanDefinitionBase.create(this, name, clazz, factory, source);
         addBeanDefinition(bd);
         return bd;
+    }
+
+    @Override
+    public <E> EventChannel<E> channel(Class<E> eventClass, String channel) {
+        return (EventChannel<E>) channels.computeIfAbsent(channel, key -> {
+            Object listenable = getBean(key);
+            if (listenable == null) {
+                listenable = findEventMulticaster(eventClass, channel);
+            }
+            return (EventChannel<?>) listenable;
+        });
+    }
+
+    @Override
+    public String getChannelName() {
+        return "smile.context.internal.event.channel";
+    }
+
+    @Override
+    public Class<ContextEvent> getChannelType() {
+        return ContextEvent.class;
+    }
+
+    @Override
+    public void addEventListener(Predicate<? extends ContextEvent> matcher, ApplicationEventListener<? extends ContextEvent> applicationEventListener) {
+        delayedEvenListenerAddingExecutor.enqueue(() -> getApplicationEventMulticaster().addEventListener(matcher, applicationEventListener));
+    }
+
+    @Override
+    public void removeAllEventListeners() {
+
+    }
+
+    @Override
+    public void removeEventListener(Predicate<ApplicationEventListener<? extends ContextEvent>> predicate) {
+
+    }
+
+    @Override
+    public EventPublisher<ContextEvent> getEventPublisher() {
+        return this::multicastEvent;
     }
 }
 

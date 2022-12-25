@@ -1,6 +1,8 @@
 package cn.smilefamily.aop;
 
 import cn.smilefamily.bean.BeanDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -9,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 public class ComposedAdvisor {
+    private static final Logger logger = LoggerFactory
+            .getLogger(ComposedAdvisor.class);
     private List<AdvisorDefinition> advisorDefinitions = new ArrayList<>();
     private static Method executeMethod;
 
@@ -55,18 +59,22 @@ public class ComposedAdvisor {
             } else {
                 AdvisorDefinition aroundAdvisor = beforeAndAroundList.remove(0);
                 afterAndAroundList.remove(0);
-                ret = aroundAdvisor.invokeAdvice(bd, this, self, executeMethod,originalProceed, new Object[]{bd, target, self, originalProceed, targetMethod, originalArgs, null, null, beforeAndAroundList, afterAndAroundList}, null, null);
+                ret = aroundAdvisor.invokeAdvice(bd, this, self, executeMethod, originalProceed, new Object[]{bd, target, self, originalProceed, targetMethod, originalArgs, null, null, beforeAndAroundList, afterAndAroundList}, null, null);
             }
             List<AdvisorDefinition> list = suffixes.stream().filter(a -> a.getAdviceType() != AdvisorDefinition.AdviceType.AfterThrowingAdvice).toList();
             for (int i = list.size() - 1; i >= 0; i--) {
                 AdvisorDefinition suffix = list.get(i);
-                suffix.invokeAdvice(bd, target, self, targetMethod,originalProceed, originalArgs, ret, null);
+                suffix.invokeAdvice(bd, target, self, targetMethod, originalProceed, originalArgs, ret, null);
             }
         } catch (Throwable t) {
+            logger.error("exception in aop: ", t);
             List<AdvisorDefinition> list = suffixes.stream().filter(a -> a.getAdviceType() == AdvisorDefinition.AdviceType.AfterThrowingAdvice).toList();
+            if (list.isEmpty()) {
+                throw t;
+            }
             for (int i = list.size() - 1; i >= 0; i--) {
                 AdvisorDefinition suffix = list.get(i);
-                suffix.invokeAdvice(bd, target, self, targetMethod,originalProceed, originalArgs, null, t);
+                suffix.invokeAdvice(bd, target, self, targetMethod, originalProceed, originalArgs, null, t);
             }
             return ret;
         }

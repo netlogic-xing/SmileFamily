@@ -1,9 +1,8 @@
 package cn.smilefamily.bean;
 
 import cn.smilefamily.BeanInitializationException;
-import cn.smilefamily.annotation.Alias;
+import cn.smilefamily.annotation.core.Alias;
 import cn.smilefamily.annotation.core.*;
-import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.aop.ComposedAdvisor;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.common.MiscUtils;
@@ -226,6 +225,19 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
         return source;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BeanDefinitionBase that = (BeanDefinitionBase) o;
+        return context.equals(that.context) && name.equals(that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(context, name);
+    }
+
     private static class SingletonBeanDefinition extends BeanDefinitionBase {
         private SingletonBeanDefinition(Context context, String name, Class<?> clazz) {
             super(context, name, clazz);
@@ -359,8 +371,8 @@ public abstract class BeanDefinitionBase implements BeanDefinition {
             createInstance();
         }
         if (!beanInjectionPlanned) {
-            injectExecutor.addFirst(name, this::injectDependencies);
-            postConstructExecutor.addFirst(name, this::callPostConstruct);
+            injectExecutor.enqueue(name, this::injectDependencies);
+            postConstructExecutor.enqueue(name, this::callPostConstruct);
             beanInjectionPlanned = true;
         }
         debugStack.removeLast();

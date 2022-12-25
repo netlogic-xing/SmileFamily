@@ -3,13 +3,16 @@ package cn.smilefamily.context;
 import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.BeanDefinitionBase;
+import cn.smilefamily.event.ContextEvent;
+import cn.smilefamily.event.ContextEventChannel;
+import cn.smilefamily.event.EventChannelSupportable;
 
 import java.lang.annotation.Annotation;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Supplier;
 
-public interface Context extends ContextManageable, BeanFactory {
+public interface Context extends ContextManageable, BeanFactory , ContextEventChannel<ContextEvent>, EventChannelSupportable {
     /**
      * 用于实现aop，最终用户不需要使用此方法
      *

@@ -17,6 +17,28 @@ public class AnnotationRegistry {
     private static Map<Class<? extends Annotation>, AnnotationFactory> factories = new HashMap<>();
 
     static {
+        register(Bean.class, Aspect.class, element -> new Bean() {
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return Bean.class;
+            }
+
+            @Override
+            public String value() {
+                return element.getAnnotation(Aspect.class).value();
+            }
+        });
+        register(Bean.class, cn.smilefamily.annotation.event.EventListener.class, element -> new Bean() {
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return Bean.class;
+            }
+
+            @Override
+            public String value() {
+                return "";
+            }
+        });
     }
 
     public static void register(Class<? extends Annotation> annotation,

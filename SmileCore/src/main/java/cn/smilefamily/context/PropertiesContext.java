@@ -2,13 +2,11 @@ package cn.smilefamily.context;
 
 import cn.smilefamily.BeanInitializationException;
 import cn.smilefamily.annotation.core.Profile;
-import cn.smilefamily.aop.AdvisorDefinition;
 import cn.smilefamily.bean.BeanDefinition;
 import cn.smilefamily.bean.PropertyBeanDefinition;
 import cn.smilefamily.common.DelayedTaskExecutor;
 import cn.smilefamily.util.BeanUtils;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.*;
 
@@ -47,7 +45,7 @@ class PropertiesContext implements BeanFactory {
                     }
                     return;
                 }
-                propertyEvaluator.addFirst(key, () -> {
+                propertyEvaluator.enqueue(key, () -> {
                     String realKey = BeanUtils.expression(key, (placeHolder, defaultVal) -> {
                         //这里通过host(parent)获取bean，目的是能在更大范围内查找依赖
                         String value = System.getProperty(placeHolder, (String) host.getBean(placeHolder, defaultVal));

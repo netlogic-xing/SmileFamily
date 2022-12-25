@@ -16,6 +16,8 @@ public class HostService {
     public void doAction() {
         System.out.println(dataSource);
     }
+
+    @CustomizedName("actionAlias")
     public void doSomething(String name, int age, String source){
         System.out.println("In normal method: name = " + name + ", age = " + age + ", source = " +source);
     }

@@ -1,6 +1,11 @@
 package cn.smilefamily.iocexample.external.advice;
 
 import cn.smilefamily.annotation.aop.*;
+import cn.smilefamily.annotation.aop.args.*;
+import cn.smilefamily.annotation.aop.match.Args;
+import cn.smilefamily.annotation.aop.match.WithMethod;
+import cn.smilefamily.annotation.aop.match.WithType;
+import cn.smilefamily.iocexample.service.CustomizedName;
 import cn.smilefamily.iocexample.service.HostService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -28,8 +33,8 @@ public class LogAspect {
     @Order(10)
     @WithType(HostService.class)
     @WithMethod("doSomething")
-    public void audit(@BeanName String name, @Return String result, @OrderValue int order) {
-        System.out.println(order + "---->"+name+"-11-" + result);
+    public void audit(@BeanName String name, @Return String result, @OrderValue int order, @Annotated CustomizedName customizedName) {
+        System.out.println(order + "---->"+name+"-11-" + result + " customizedName=" + customizedName.value());
     }
 
     @After
@@ -44,7 +49,7 @@ public class LogAspect {
     @WithType(HostService.class)
     @WithMethod("doSomething")
     @Order(0)
-    public Object transaction(@TargetObject Object target,  @TargetMethod Method targetMethod, @Args Object[] args, @OrderValue int order){
+    public Object transaction(@TargetObject Object target, @TargetMethod Method targetMethod, @Args Object[] args, @OrderValue int order){
         System.out.println(order + ".... replace do something");
         try {
             System.out.println("execute method: " + targetMethod.getName());

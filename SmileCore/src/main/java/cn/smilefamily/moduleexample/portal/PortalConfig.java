@@ -1,10 +1,10 @@
 package cn.smilefamily.moduleexample.portal;
 
 import cn.smilefamily.annotation.core.Configuration;
-import cn.smilefamily.annotation.core.ScanPackage;
+import cn.smilefamily.annotation.core.ScanBean;
 
 @Configuration
-@ScanPackage("cn.smilefamily.moduleexample.portal")
+@ScanBean("cn.smilefamily.moduleexample.portal")
 public class PortalConfig {
 
 }
